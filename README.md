@@ -370,10 +370,12 @@ Want to create a standalone macOS .app that can be distributed as a DMG? Follow 
    pip install -r requirements-build.txt
    ```
 
-2. **Run the build script**:
+2. **Run the build script** (requires sudo for cleaning previous builds):
    ```bash
-   ./build_mac_app.sh
+   sudo ./build_mac_app.sh
    ```
+
+   Note: `sudo` is required to clean previous build artifacts. You'll be prompted for your password.
 
 3. **Find your DMG**:
    ```bash
@@ -390,7 +392,7 @@ Want to create a standalone macOS .app that can be distributed as a DMG? Follow 
 
 - **`.dmg` installer**: `dist/WikidichEbookCreator-{version}.dmg`
   - Drag-and-drop installer
-  - Compressed disk image (~100-200MB)
+  - Compressed disk image (~70-80MB)
   - Ready for distribution
 
 ### Distribution
