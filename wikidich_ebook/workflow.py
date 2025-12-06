@@ -170,13 +170,14 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
         driver.quit()
 
 
-def download_truyen(input_dir: str, latest_chapter_read: int = 0) -> None:
+def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callback=None) -> None:
     """
     Download all chapters of a book.
 
     Args:
         input_dir: Directory containing book info
         latest_chapter_read: Start from this chapter number
+        progress_callback: Optional callback function(current, total) for progress updates
     """
     # Load book info
     info_file = os.path.join(input_dir, "info.json")
@@ -224,7 +225,8 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0) -> None:
     while num_fail > 0:
         num_fail = download_chapters(
             chapters, chapter_prefix, book_info.title, book_info.author,
-            book_info.url_pattern, book_info.output_folder, latest_chapter_read
+            book_info.url_pattern, book_info.output_folder, latest_chapter_read,
+            progress_callback
         )
 
     print("Finish Downloading!")
@@ -372,7 +374,8 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
 
 
 def download_n_make_ebook_wikidich(url_toc: str, latest_chapter_read: int = 0,
-                                   use_volume_structure: Optional[bool] = None) -> None:
+                                   use_volume_structure: Optional[bool] = None,
+                                   progress_callback=None) -> None:
     """
     Complete workflow: check updates, get TOC, download chapters, and create EPUB.
 
@@ -381,6 +384,7 @@ def download_n_make_ebook_wikidich(url_toc: str, latest_chapter_read: int = 0,
         latest_chapter_read: Chapter number to start from (0 = start from beginning)
         use_volume_structure: Whether to use volume structure in EPUB TOC.
                              If None (default), auto-detect based on unique volumes.
+        progress_callback: Optional callback function(current, total) for progress updates
     """
     try:
         # Check if book has been updated
@@ -390,7 +394,7 @@ def download_n_make_ebook_wikidich(url_toc: str, latest_chapter_read: int = 0,
         get_toc(url_toc, folder)
 
         # Download chapters
-        download_truyen(folder, latest_chapter_read)
+        download_truyen(folder, latest_chapter_read, progress_callback)
 
         # Create EPUB
         make_ebook(folder, latest_chapter_read, use_volume_structure)

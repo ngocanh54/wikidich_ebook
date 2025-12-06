@@ -45,7 +45,7 @@ def create_chapter_html(title: str, author: str, chapter_title: str,
 
 def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
                       author: str, url_pattern: str, output_folder: str,
-                      latest_chapter_read: int = 0) -> int:
+                      latest_chapter_read: int = 0, progress_callback=None) -> int:
     """
     Download all chapters from the list.
 
@@ -57,6 +57,7 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
         url_pattern: URL pattern for chapters
         output_folder: Folder to save chapters
         latest_chapter_read: Start from this chapter number
+        progress_callback: Optional callback function(current, total) for progress updates
 
     Returns:
         Number of failed downloads
@@ -81,6 +82,10 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
     print(f"\n📥 Downloading {total_chapters} chapters...\n")
 
     for idx, chapter in enumerate(chapters_to_download, 1):
+        # Update progress callback
+        if progress_callback:
+            progress_callback(idx, total_chapters)
+
         chapter_url = f"{url_pattern}{chapter.url.split('/')[-1]}"
         output_file = os.path.join(
             output_folder,

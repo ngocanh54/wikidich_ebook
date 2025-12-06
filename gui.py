@@ -48,6 +48,7 @@ class WorkerThread(QThread):
     log_signal = pyqtSignal(str)
     finished_signal = pyqtSignal(bool, str)
     status_signal = pyqtSignal(str)
+    progress_signal = pyqtSignal(int, int)  # (current, total) for chapter downloads
 
     def __init__(self, url, output_folder, operation_mode='full', start_chapter=0,
                  volume_structure='auto', manual_pages=None):
@@ -58,6 +59,10 @@ class WorkerThread(QThread):
         self.start_chapter = start_chapter
         self.volume_structure = volume_structure
         self.manual_pages = manual_pages
+
+    def progress_callback(self, current, total):
+        """Callback for chapter download progress."""
+        self.progress_signal.emit(current, total)
 
     def run(self):
         """Execute the download and ebook creation."""
@@ -134,8 +139,8 @@ class WorkerThread(QThread):
 
                 is_updated, folder = check_if_updated(self.url)
 
-                # download_truyen shows its own progress via tqdm in logs
-                download_truyen(folder, self.start_chapter)
+                # Pass progress callback for GUI progress bar
+                download_truyen(folder, self.start_chapter, self.progress_callback)
 
                 self.log_signal.emit("\n✓ Chapters downloaded successfully!\n")
                 self.finished_signal.emit(True, "Chapters downloaded successfully!")
@@ -159,11 +164,12 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Full Workflow (Download & Create EPUB)\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                # Full workflow - download_n_make_ebook_wikidich shows detailed logs
+                # Full workflow - pass progress callback for GUI progress bar
                 download_n_make_ebook_wikidich(
                     url_toc=self.url,
                     latest_chapter_read=self.start_chapter,
-                    use_volume_structure=volume_structure_value
+                    use_volume_structure=volume_structure_value,
+                    progress_callback=self.progress_callback
                 )
 
                 self.log_signal.emit("\n" + "="*60 + "\n")
@@ -536,6 +542,7 @@ class WikidichEbookGUI(QMainWindow):
         self.worker.log_signal.connect(self.append_log)
         self.worker.finished_signal.connect(self.download_finished)
         self.worker.status_signal.connect(self.update_status)
+        self.worker.progress_signal.connect(self.update_progress)
         self.worker.start()
 
     def append_log(self, text):
@@ -549,11 +556,25 @@ class WikidichEbookGUI(QMainWindow):
         """Update status bar text."""
         self.status_label.setText(status)
 
+    def update_progress(self, current, total):
+        """Update progress bar with chapter download progress."""
+        if total > 0:
+            # Set progress bar to determinate mode
+            self.progress.setRange(0, total)
+            self.progress.setValue(current)
+            # Update format to show "X/Total chapters"
+            self.progress.setFormat(f"{current}/{total} chapters (%p%)")
+        else:
+            # Reset to indeterminate mode
+            self.progress.setRange(0, 0)
+            self.progress.setFormat("%p%")
+
     def download_finished(self, success, message):
         """Handle download completion."""
         self.download_btn.setEnabled(True)
         self.progress.setRange(0, 100)
         self.progress.setValue(100 if success else 0)
+        self.progress.setFormat("%p%")  # Reset format to percentage
 
         if success:
             QMessageBox.information(
