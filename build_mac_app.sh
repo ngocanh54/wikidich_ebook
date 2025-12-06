@@ -19,7 +19,13 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 
 # Get version from __init__.py
-VERSION=$(python3 -c "import sys; sys.path.insert(0, 'wikidich_ebook'); from __init__ import __version__; print(__version__)")
+VERSION=$(python3 -c "
+import re
+with open('wikidich_ebook/__init__.py', 'r') as f:
+    content = f.read()
+    match = re.search(r'__version__\s*=\s*[\"\\']([^\"\\']*)[\"\\'\\']', content)
+    print(match.group(1) if match else '2.0.0')
+")
 echo "📦 Building version: $VERSION"
 echo ""
 
@@ -71,7 +77,7 @@ hdiutil create -size 500m -fs HFS+ -volname "$VOLUME_NAME" "$TMP_DMG"
 
 # Mount the DMG
 echo "  Mounting disk image..."
-MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$TMP_DMG" | grep Volumes | awk '{print $3}')
+MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$TMP_DMG" | grep "/Volumes/" | sed 's/.*\(\/Volumes\/.*\)/\1/' | head -1)
 
 # Copy the app to the DMG
 echo "  Copying app to disk image..."

@@ -9,7 +9,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QTextEdit,
-    QProgressBar, QFileDialog, QMessageBox
+    QProgressBar, QFileDialog, QMessageBox, QSpinBox, QComboBox, QGroupBox
 )
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl
 from PyQt6.QtGui import QFont, QDesktopServices, QAction
@@ -17,7 +17,14 @@ from PyQt6.QtGui import QFont, QDesktopServices, QAction
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from wikidich_ebook import download_n_make_ebook_wikidich, __version__
+from wikidich_ebook import (
+    download_n_make_ebook_wikidich,
+    check_if_updated,
+    get_toc,
+    download_truyen,
+    make_ebook,
+    __version__
+)
 from wikidich_ebook.updater import check_for_updates
 
 
@@ -27,11 +34,17 @@ class WorkerThread(QThread):
     log_signal = pyqtSignal(str)
     finished_signal = pyqtSignal(bool, str)
     status_signal = pyqtSignal(str)
+    progress_signal = pyqtSignal(int)  # Progress percentage (0-100)
 
-    def __init__(self, url, output_folder):
+    def __init__(self, url, output_folder, operation_mode='full', start_chapter=0,
+                 volume_structure='auto', manual_pages=None):
         super().__init__()
         self.url = url
         self.output_folder = output_folder
+        self.operation_mode = operation_mode
+        self.start_chapter = start_chapter
+        self.volume_structure = volume_structure
+        self.manual_pages = manual_pages
 
     def run(self):
         """Execute the download and ebook creation."""
@@ -41,33 +54,129 @@ class WorkerThread(QThread):
         old_stdout = sys.stdout
         sys.stdout = StringIO()
 
+        # Parse volume structure
+        volume_structure_value = None
+        if self.volume_structure == 'yes':
+            volume_structure_value = True
+        elif self.volume_structure == 'no':
+            volume_structure_value = False
+
+        # Parse manual pages
+        page_list = None
+        is_manual = False
+        if self.manual_pages:
+            try:
+                page_list = [int(p.strip()) for p in self.manual_pages.split(',')]
+                is_manual = True
+            except:
+                pass
+
         try:
             # Change to output folder
             if self.output_folder:
                 os.chdir(self.output_folder)
 
-            self.status_signal.emit("Downloading and creating EPUB...")
-            self.log_signal.emit("\n" + "="*60 + "\n")
-            self.log_signal.emit("Starting: Download & Create EPUB\n")
-            self.log_signal.emit("="*60 + "\n\n")
+            self.progress_signal.emit(5)
 
-            # Run the full workflow
-            download_n_make_ebook_wikidich(
-                url_toc=self.url,
-                latest_chapter_read=0,
-                use_volume_structure=None  # Auto-detect
-            )
+            if self.operation_mode == 'check':
+                self.status_signal.emit("Checking for updates...")
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("Operation: Check for Updates\n")
+                self.log_signal.emit("="*60 + "\n\n")
 
-            self.log_signal.emit("\n" + "="*60 + "\n")
-            self.log_signal.emit("✓ SUCCESS! EPUB created successfully!\n")
-            self.log_signal.emit("="*60 + "\n\n")
+                self.progress_signal.emit(20)
+                is_updated, folder = check_if_updated(self.url)
+                self.progress_signal.emit(100)
+
+                if is_updated:
+                    self.log_signal.emit(f"\n✓ Updates detected! Folder: {folder}\n")
+                    self.finished_signal.emit(True, f"Updates detected! Folder: {folder}")
+                else:
+                    self.log_signal.emit(f"\n✓ No updates. Folder: {folder}\n")
+                    self.finished_signal.emit(True, f"No updates. Folder: {folder}")
+
+            elif self.operation_mode == 'toc':
+                self.status_signal.emit("Extracting Table of Contents...")
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("Operation: Extract Table of Contents\n")
+                self.log_signal.emit("="*60 + "\n\n")
+
+                self.progress_signal.emit(15)
+                is_updated, folder = check_if_updated(self.url)
+                self.progress_signal.emit(30)
+
+                get_toc(
+                    self.url,
+                    folder,
+                    check_pagination=(page_list is not None),
+                    page_list=page_list,
+                    is_manual=is_manual
+                )
+                self.progress_signal.emit(100)
+
+                self.log_signal.emit("\n✓ TOC extracted successfully!\n")
+                self.finished_signal.emit(True, "TOC extracted successfully!")
+
+            elif self.operation_mode == 'download':
+                self.status_signal.emit("Downloading chapters...")
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("Operation: Download Chapters\n")
+                self.log_signal.emit("="*60 + "\n\n")
+
+                self.progress_signal.emit(10)
+                is_updated, folder = check_if_updated(self.url)
+                self.progress_signal.emit(20)
+
+                # Note: download_truyen shows its own progress in logs
+                download_truyen(folder, self.start_chapter)
+                self.progress_signal.emit(100)
+
+                self.log_signal.emit("\n✓ Chapters downloaded successfully!\n")
+                self.finished_signal.emit(True, "Chapters downloaded successfully!")
+
+            elif self.operation_mode == 'epub':
+                self.status_signal.emit("Creating EPUB...")
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("Operation: Create EPUB\n")
+                self.log_signal.emit("="*60 + "\n\n")
+
+                self.progress_signal.emit(10)
+                is_updated, folder = check_if_updated(self.url)
+                self.progress_signal.emit(25)
+
+                make_ebook(folder, self.start_chapter, volume_structure_value)
+                self.progress_signal.emit(100)
+
+                self.log_signal.emit("\n✓ EPUB created successfully!\n")
+                self.finished_signal.emit(True, "EPUB created successfully!")
+
+            else:  # full workflow
+                self.status_signal.emit("Downloading and creating EPUB...")
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("Operation: Full Workflow (Download & Create EPUB)\n")
+                self.log_signal.emit("="*60 + "\n\n")
+
+                self.progress_signal.emit(10)
+                self.status_signal.emit("Checking for updates...")
+
+                # Full workflow - emit progress at key milestones
+                # The actual download_n_make_ebook_wikidich will show detailed logs
+                download_n_make_ebook_wikidich(
+                    url_toc=self.url,
+                    latest_chapter_read=self.start_chapter,
+                    use_volume_structure=volume_structure_value
+                )
+
+                self.progress_signal.emit(100)
+                self.log_signal.emit("\n" + "="*60 + "\n")
+                self.log_signal.emit("✓ SUCCESS! EPUB created successfully!\n")
+                self.log_signal.emit("="*60 + "\n\n")
+                self.finished_signal.emit(True, "EPUB created successfully!")
 
             # Get stdout output
             output = sys.stdout.getvalue()
             if output:
                 self.log_signal.emit(output)
-
-            self.finished_signal.emit(True, "EPUB created successfully!")
 
         except Exception as e:
             error_msg = f"Error: {str(e)}"
@@ -175,6 +284,88 @@ class WikidichEbookGUI(QMainWindow):
         folder_layout.addWidget(browse_btn)
         main_layout.addLayout(folder_layout)
 
+        # Options Group
+        options_group = QGroupBox("⚙️ Options")
+        options_group.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        options_layout = QVBoxLayout()
+        options_group.setLayout(options_layout)
+
+        # Row 1: Operation Mode and Start Chapter
+        row1 = QHBoxLayout()
+
+        # Operation Mode
+        mode_layout = QVBoxLayout()
+        mode_label = QLabel("Operation:")
+        mode_label.setFont(QFont("Arial", 10))
+        mode_layout.addWidget(mode_label)
+
+        self.operation_combo = QComboBox()
+        self.operation_combo.addItems([
+            "Full Workflow",
+            "Check for Updates",
+            "Extract TOC Only",
+            "Download Chapters Only",
+            "Create EPUB Only"
+        ])
+        self.operation_combo.setFont(QFont("Arial", 10))
+        self.operation_combo.setMinimumHeight(30)
+        self.operation_combo.currentTextChanged.connect(self.update_action_button_text)
+        mode_layout.addWidget(self.operation_combo)
+        row1.addLayout(mode_layout)
+
+        # Start Chapter
+        chapter_layout = QVBoxLayout()
+        chapter_label = QLabel("Start Chapter:")
+        chapter_label.setFont(QFont("Arial", 10))
+        chapter_layout.addWidget(chapter_label)
+
+        self.start_chapter_spin = QSpinBox()
+        self.start_chapter_spin.setMinimum(0)
+        self.start_chapter_spin.setMaximum(9999)
+        self.start_chapter_spin.setValue(0)
+        self.start_chapter_spin.setFont(QFont("Arial", 10))
+        self.start_chapter_spin.setMinimumHeight(30)
+        self.start_chapter_spin.setToolTip("Chapter number to start from (0 = from beginning)")
+        chapter_layout.addWidget(self.start_chapter_spin)
+        row1.addLayout(chapter_layout)
+
+        options_layout.addLayout(row1)
+
+        # Row 2: Volume Structure and Manual Pages
+        row2 = QHBoxLayout()
+
+        # Volume Structure
+        volume_layout = QVBoxLayout()
+        volume_label = QLabel("Volume Structure:")
+        volume_label.setFont(QFont("Arial", 10))
+        volume_layout.addWidget(volume_label)
+
+        self.volume_combo = QComboBox()
+        self.volume_combo.addItems(["Auto-detect", "Force Yes", "Force No"])
+        self.volume_combo.setFont(QFont("Arial", 10))
+        self.volume_combo.setMinimumHeight(30)
+        self.volume_combo.setToolTip("Use volume structure in EPUB TOC")
+        volume_layout.addWidget(self.volume_combo)
+        row2.addLayout(volume_layout)
+
+        # Manual Pages
+        pages_layout = QVBoxLayout()
+        pages_label = QLabel("Manual Pages (optional):")
+        pages_label.setFont(QFont("Arial", 10))
+        pages_layout.addWidget(pages_label)
+
+        self.manual_pages_input = QLineEdit()
+        self.manual_pages_input.setPlaceholderText("e.g., 1,2,3,4,5")
+        self.manual_pages_input.setFont(QFont("Arial", 10))
+        self.manual_pages_input.setMinimumHeight(30)
+        self.manual_pages_input.setToolTip("Comma-separated page numbers for manual pagination")
+        pages_layout.addWidget(self.manual_pages_input)
+        row2.addLayout(pages_layout)
+
+        options_layout.addLayout(row2)
+
+        main_layout.addWidget(options_group)
+
         # Action Button
         self.download_btn = QPushButton("📥 Download & Create EPUB")
         self.download_btn.setFont(QFont("Arial", 14, QFont.Weight.Bold))
@@ -203,13 +394,17 @@ class WikidichEbookGUI(QMainWindow):
 
         # Progress Bar
         self.progress = QProgressBar()
-        self.progress.setTextVisible(False)
-        self.progress.setMinimumHeight(8)
+        self.progress.setTextVisible(True)  # Show percentage
+        self.progress.setMinimumHeight(25)
+        self.progress.setFormat("%p%")  # Show percentage with % sign
         self.progress.setStyleSheet("""
             QProgressBar {
                 border: none;
                 border-radius: 4px;
                 background-color: #ecf0f1;
+                text-align: center;
+                color: #2c3e50;
+                font-weight: bold;
             }
             QProgressBar::chunk {
                 border-radius: 4px;
@@ -254,6 +449,17 @@ class WikidichEbookGUI(QMainWindow):
             self.current_folder = folder
             self.folder_display.setText(folder)
 
+    def update_action_button_text(self, operation_text):
+        """Update action button text based on selected operation."""
+        button_texts = {
+            "Full Workflow": "📥 Download & Create EPUB",
+            "Check for Updates": "🔍 Check for Updates",
+            "Extract TOC Only": "📑 Extract Table of Contents",
+            "Download Chapters Only": "⬇️ Download Chapters",
+            "Create EPUB Only": "📚 Create EPUB"
+        }
+        self.download_btn.setText(button_texts.get(operation_text, "📥 Download & Create EPUB"))
+
     def validate_inputs(self):
         """Validate user inputs."""
         url = self.url_input.text().strip()
@@ -285,20 +491,59 @@ class WikidichEbookGUI(QMainWindow):
 
         url = self.url_input.text().strip()
 
+        # Get operation mode
+        operation_map = {
+            "Full Workflow": "full",
+            "Check for Updates": "check",
+            "Extract TOC Only": "toc",
+            "Download Chapters Only": "download",
+            "Create EPUB Only": "epub"
+        }
+        operation_mode = operation_map.get(
+            self.operation_combo.currentText(),
+            "full"
+        )
+
+        # Get start chapter
+        start_chapter = self.start_chapter_spin.value()
+
+        # Get volume structure
+        volume_map = {
+            "Auto-detect": "auto",
+            "Force Yes": "yes",
+            "Force No": "no"
+        }
+        volume_structure = volume_map.get(
+            self.volume_combo.currentText(),
+            "auto"
+        )
+
+        # Get manual pages
+        manual_pages = self.manual_pages_input.text().strip() or None
+
         # Disable button
         self.download_btn.setEnabled(False)
 
-        # Start indeterminate progress
-        self.progress.setRange(0, 0)
+        # Reset progress bar to show percentage
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
 
         # Clear log
         self.log_text.clear()
 
         # Create and start worker thread
-        self.worker = WorkerThread(url, self.current_folder)
+        self.worker = WorkerThread(
+            url,
+            self.current_folder,
+            operation_mode=operation_mode,
+            start_chapter=start_chapter,
+            volume_structure=volume_structure,
+            manual_pages=manual_pages
+        )
         self.worker.log_signal.connect(self.append_log)
         self.worker.finished_signal.connect(self.download_finished)
         self.worker.status_signal.connect(self.update_status)
+        self.worker.progress_signal.connect(self.update_progress)
         self.worker.start()
 
     def append_log(self, text):
@@ -311,6 +556,10 @@ class WikidichEbookGUI(QMainWindow):
     def update_status(self, status):
         """Update status bar text."""
         self.status_label.setText(status)
+
+    def update_progress(self, value):
+        """Update progress bar value (thread-safe)."""
+        self.progress.setValue(value)
 
     def download_finished(self, success, message):
         """Handle download completion."""

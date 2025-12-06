@@ -5,7 +5,7 @@ Build with: pyinstaller wikidich_ebook.spec
 """
 
 import sys
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, collect_all
 
 block_cipher = None
 
@@ -14,12 +14,28 @@ datas = []
 datas += collect_data_files('ebooklib')
 datas += collect_data_files('tqdm')
 
+# Collect all pandas and numpy modules
+pandas_datas, pandas_binaries, pandas_hiddenimports = collect_all('pandas')
+numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all('numpy')
+
+datas += pandas_datas
+datas += numpy_datas
+
+binaries = []
+binaries += pandas_binaries
+binaries += numpy_binaries
+
+# Collect all submodules
+all_hiddenimports = []
+all_hiddenimports += pandas_hiddenimports
+all_hiddenimports += numpy_hiddenimports
+
 a = Analysis(
     ['gui.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
-    hiddenimports=[
+    hiddenimports=all_hiddenimports + [
         'wikidich_ebook',
         'wikidich_ebook.models',
         'wikidich_ebook.config',
@@ -36,6 +52,12 @@ a = Analysis(
         'packaging.version',
         'packaging.specifiers',
         'packaging.requirements',
+        'numpy',
+        'numpy.core',
+        'numpy.core._multiarray_umath',
+        'pandas',
+        'pandas._libs',
+        'pandas._libs.tslibs',
     ],
     hookspath=[],
     hooksconfig={},
@@ -44,7 +66,6 @@ a = Analysis(
         'matplotlib',
         'PIL',
         'tkinter',
-        'numpy',
         'scipy',
     ],
     win_no_prefer_redirects=False,
