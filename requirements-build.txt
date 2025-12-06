@@ -1,0 +1,8 @@
+# Build dependencies for creating macOS .app and .dmg
+# Install with: pip install -r requirements-build.txt
+
+# Include all runtime requirements
+-r requirements.txt
+
+# Build tools
+pyinstaller>=5.13.0

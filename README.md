@@ -354,6 +354,70 @@ The `.gitignore` file is configured to exclude all generated files from version 
 
 This ensures your repository stays clean and only tracks source code, not generated content. You can safely run the tool locally without worrying about accidentally committing large ebook files.
 
+## Building macOS App (DMG Distribution)
+
+Want to create a standalone macOS .app that can be distributed as a DMG? Follow these steps:
+
+### Prerequisites
+- macOS 10.13+ (High Sierra or later)
+- Python 3.7+
+- Xcode Command Line Tools
+
+### Build Steps
+
+1. **Install build dependencies**:
+   ```bash
+   pip install -r requirements-build.txt
+   ```
+
+2. **Run the build script**:
+   ```bash
+   ./build_mac_app.sh
+   ```
+
+3. **Find your DMG**:
+   ```bash
+   # The DMG will be in the dist/ folder
+   ls dist/*.dmg
+   ```
+
+### What Gets Built
+
+- **`.app` bundle**: `dist/Wikidich Ebook Creator.app`
+  - Standalone macOS application
+  - Includes all dependencies
+  - No Python installation required for end users
+
+- **`.dmg` installer**: `dist/WikidichEbookCreator-{version}.dmg`
+  - Drag-and-drop installer
+  - Compressed disk image (~100-200MB)
+  - Ready for distribution
+
+### Distribution
+
+Users can install by:
+1. Downloading the DMG file
+2. Opening it
+3. Dragging "Wikidich Ebook Creator" to Applications folder
+4. Launching from Applications
+
+### Auto-Update
+
+The app automatically:
+- Checks for updates on GitHub releases on startup
+- Notifies users when new versions are available
+- Opens download page with one click
+- Users just download new DMG and replace the app
+
+### Creating a GitHub Release
+
+To enable auto-updates for users:
+
+1. Create a new release on GitHub
+2. Tag it with version (e.g., `v2.0.0`)
+3. Upload the DMG file as a release asset
+4. Users' apps will detect and prompt to download
+
 ## Troubleshooting
 
 ### ChromeDriver Issues
