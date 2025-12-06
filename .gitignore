@@ -1,0 +1,91 @@
+# Ebook files - generated output
+*.epub
+*.mobi
+*.azw3
+*.pdf
+
+# Downloaded chapter files
+*.html
+chap_*.html
+
+# Book cover images
+*_bookcover.jpg
+*_bookcover.png
+
+# Book metadata and TOC
+info.json
+toc.csv
+
+# Downloaded fonts
+*.ttf
+*.otf
+*.woff
+*.woff2
+Playwrite-IT-Moderna-Regular.ttf
+
+# Book output folders
+*/info.json
+*/toc.csv
+*/*_bookcover.jpg
+*/chap_*.html
+*/download_log.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Chrome/Selenium
+chromedriver
+*.deb
+*.zip
+
+# Google Colab
+/content/
+
+# Temp files
+tmp/
+temp/
+*.tmp
