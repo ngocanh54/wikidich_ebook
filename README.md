@@ -1,440 +1,497 @@
 # Wikidich Ebook Creator
 
-A Python tool to download Vietnamese web novels from [truyenwikidich.net](https://truyenwikidich.net) and convert them into offline EPUB ebooks.
+Download Vietnamese web novels from [truyenwikidich.net](https://truyenwikidich.net) and read them offline on your phone, tablet, or e-reader!
 
-## Features
+---
 
-- **Modern PyQt6 GUI**: User-friendly graphical interface for local use
-- **Automated Scraping**: Downloads complete novels with all chapters from truyenwikidich.net
-- **EPUB Generation**: Creates properly formatted EPUB files with custom fonts
-- **Volume Support**: Automatically detects and organizes chapters by volumes
-- **Smart Updates**: Checks for new chapters and only downloads what's needed
-- **Pagination Handling**: Automatically handles multi-page table of contents
-- **Resume Support**: Continue from a specific chapter number
-- **Auto ChromeDriver Management**: No manual ChromeDriver installation needed
-- **Offline Reading**: Read your favorite novels offline on any EPUB reader
+## 📱 For Regular Users (Easiest Way)
 
-## Quick Start (Local Setup)
+### macOS Users - Just Download and Use!
 
-### For Local Use (Windows/macOS/Linux)
+**No coding needed!** Simply download the app and start creating ebooks.
 
-1. **Prerequisites**:
-   - Python 3.7+
-   - Google Chrome browser (ChromeDriver is auto-managed!)
+1. **Download the App**
+   - Go to [Releases](https://github.com/ngocanh54/wikidich_ebook/releases/latest)
+   - Download `WikidichEbookCreator-2.1.0.dmg`
 
-2. **Clone and Setup**:
+2. **Install**
+   - Open the downloaded DMG file
+   - Drag "Wikidich Ebook Creator" to your Applications folder
+   - Done!
+
+3. **First Time Launch**
+   - Right-click the app → Click "Open" (first time only)
+   - Your Mac will ask "Are you sure?" → Click "Open"
+   - After first time, just double-click to open normally
+
+4. **How to Use**
+   - Open the app
+   - Copy the novel's URL from truyenwikidich.net
+   - Paste it into the app
+   - Click "Download & Create EPUB"
+   - Wait for it to finish
+   - Find your EPUB file in the folder you chose!
+
+**That's it!** 🎉 You can now read the EPUB on any device with an ebook reader app.
+
+### What You Can Do
+
+- ✅ Download entire novels automatically
+- ✅ Resume from a specific chapter
+- ✅ Watch progress in real-time
+- ✅ Get organized EPUB files ready for reading
+- ✅ Read offline on any device (phone, tablet, Kindle, etc.)
+
+### App Features
+
+- 📊 **Real-time Progress Bar** - See exactly how many chapters are downloaded
+- 📝 **Live Logs** - Watch what's happening step-by-step
+- ⚙️ **Easy Options** - Choose where to start, how to organize chapters
+- 🔄 **Auto-Updates** - Get notified when a new version is available
+
+---
+
+## 💻 For Developers & Advanced Users
+
+Want to run from source code, customize the tool, or use it on Windows/Linux? See the sections below.
+
+<details>
+<summary><b>Click to expand: Installation from Source</b></summary>
+
+### Prerequisites
+
+- Python 3.7 or higher
+- Google Chrome browser
+- Basic command line knowledge
+
+### Setup Steps
+
+1. **Get the Code**
    ```bash
    git clone https://github.com/ngocanh54/wikidich_ebook.git
    cd wikidich_ebook
-
-   # Optional but recommended: Create virtual environment
-   python3 -m venv venv  # Use 'python' on Windows
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-   # Run automated setup
-   python3 setup_local.py  # Use 'python' on Windows
    ```
 
-3. **Launch GUI**:
+2. **Install Dependencies** (Automatic Setup)
    ```bash
-   python3 gui.py  # Use 'python' on Windows
+   # On macOS/Linux:
+   python3 setup_local.py
+
+   # On Windows:
+   python setup_local.py
    ```
 
-That's it! The setup script will:
-- ✓ Check your Python version
-- ✓ Verify Google Chrome is installed
-- ✓ Install all Python dependencies
-- ✓ Automatically download and manage ChromeDriver (no manual setup needed!)
+   The setup script will:
+   - ✓ Check your Python version
+   - ✓ Verify Google Chrome is installed
+   - ✓ Install all required packages
+   - ✓ Set up ChromeDriver automatically
 
-## Requirements
+3. **Launch the GUI**
+   ```bash
+   # On macOS/Linux:
+   python3 gui.py
 
-### For Local Use (Recommended)
+   # On Windows:
+   python gui.py
+   ```
 
-**Minimal Requirements:**
-- Python 3.7 or higher
-- Google Chrome browser
-- That's it! ChromeDriver is automatically managed by `webdriver-manager`
+</details>
 
-**Python Dependencies** (installed automatically by `setup_local.py`):
+<details>
+<summary><b>Click to expand: Command Line Usage</b></summary>
+
+### Basic Commands
+
+**Download a complete novel:**
 ```bash
-pip install -r requirements.txt
-```
-
-Key dependencies:
-- PyQt6 (Modern GUI framework)
-- selenium (Web automation)
-- webdriver-manager (Automatic ChromeDriver management)
-- beautifulsoup4 (HTML parsing)
-- ebooklib (EPUB creation)
-- And more (see requirements.txt)
-
-### For Google Colab (Advanced Users)
-
-If using Google Colab, you'll need to manually install Chrome and ChromeDriver:
-
-```bash
-apt -y update
-apt install -y wget curl unzip
-
-# Install Chrome
-wget -O ./google-chrome-stable_current_amd64.deb https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/google-chrome-stable_142.0.7444.134-1_amd64.deb
-dpkg -i google-chrome-stable_current_amd64.deb
-
-# ChromeDriver is auto-managed by webdriver-manager, no manual install needed!
-```
-
-## Project Structure
-
-The project is now organized into a modular package:
-
-```
-wikidich_ebook/
-├── wikidich_ebook/           # Main package
-│   ├── __init__.py           # Package initialization
-│   ├── models.py             # Data classes (BookInfo, Chapter)
-│   ├── config.py             # Configuration and constants
-│   ├── utils.py              # Utility functions
-│   ├── scraper.py            # Web scraping (auto ChromeDriver management)
-│   ├── parser.py             # HTML parsing functions
-│   ├── downloader.py         # Chapter downloading
-│   ├── epub_builder.py       # EPUB creation
-│   └── workflow.py           # Main workflow orchestration
-├── gui.py                    # PyQt6 GUI application
-├── main.py                   # CLI entry point
-├── setup_local.py            # Local environment setup script
-├── requirements.txt          # Python dependencies
-├── .gitignore                # Git ignore file (excludes ebooks, downloads)
-└── README.md                 # This file
-```
-
-### Module Description
-
-- **models.py**: Defines `BookInfo` and `Chapter` data classes
-- **config.py**: Contains all configuration constants (URLs, timeouts, delays)
-- **utils.py**: Utility functions for file operations, URL parsing
-- **scraper.py**: Web scraping with Selenium and BeautifulSoup
-- **parser.py**: HTML parsing for metadata and table of contents
-- **downloader.py**: Chapter downloading with retry logic
-- **epub_builder.py**: EPUB file creation and formatting
-- **workflow.py**: Main workflow orchestration functions
-
-## Usage
-
-### 1. GUI Interface (Recommended for Local Use)
-
-Launch the modern PyQt6 interface:
-
-```bash
-python3 gui.py  # Use 'python' on Windows
-```
-
-**Features:**
-- 🎨 Clean, modern interface
-- 📊 Real-time progress tracking
-- 📝 Live log output
-- ⚙️ Easy configuration options
-- 🔘 Multiple operation modes (Full, Check, TOC, Download, EPUB)
-- 📁 Custom output folder selection
-
-**How to use:**
-1. Paste the novel's table of contents URL
-2. Configure options (start chapter, volume structure, output folder)
-3. Click "Download & Create EPUB" or choose specific operations
-4. Monitor progress in the log output
-5. Get notified when complete!
-
-### 2. Command Line Interface
-
-```bash
-# Full workflow - download and create ebook
 python3 main.py "https://truyenwikidich.net/truyen/your-novel-url"
+```
 
-# Start from a specific chapter
+**Resume from chapter 100:**
+```bash
 python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --start-chapter 100
+```
 
-# Force volume structure
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --volume-structure yes
-
-# Only check for updates
+**Just check for new chapters:**
+```bash
 python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --check-only
+```
 
-# Only extract table of contents
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --toc-only
-
-# Only download chapters (requires TOC)
+**Download chapters only (no EPUB yet):**
+```bash
 python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --download-only
+```
 
-# Only create EPUB (requires downloaded chapters)
+**Create EPUB from already downloaded chapters:**
+```bash
 python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --epub-only
-
-# Manual pagination
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --pages "1,2,3,4,5"
 ```
 
 > **Note:** Use `python` instead of `python3` on Windows.
 
-### Python API Usage
+</details>
 
-#### Basic Usage
+<details>
+<summary><b>Click to expand: Python API Usage</b></summary>
 
+### For Python Programmers
+
+**Simple example:**
 ```python
 from wikidich_ebook import download_n_make_ebook_wikidich
 
-# Download and create ebook from the beginning
+# Download and create EPUB
 download_n_make_ebook_wikidich(
     url_toc="https://truyenwikidich.net/truyen/your-novel-url",
-    latest_chapter_read=0
+    latest_chapter_read=0  # Start from beginning
 )
 ```
 
-#### Advanced Usage
-
-##### Resume from a Specific Chapter
-
+**Resume from a specific chapter:**
 ```python
-from wikidich_ebook import download_n_make_ebook_wikidich
-
 download_n_make_ebook_wikidich(
     url_toc="https://truyenwikidich.net/truyen/your-novel-url",
     latest_chapter_read=100  # Start from chapter 100
 )
 ```
 
-##### Control Volume Structure
-
+**Control volume organization:**
 ```python
-from wikidich_ebook import download_n_make_ebook_wikidich
-
 download_n_make_ebook_wikidich(
     url_toc="https://truyenwikidich.net/truyen/your-novel-url",
-    latest_chapter_read=0,
-    use_volume_structure=True  # Force volume-based TOC
+    use_volume_structure=True  # Organize by volumes
 )
 ```
 
-##### Manual Pagination Control
+### Advanced: Step-by-Step Control
 
 ```python
 from wikidich_ebook import check_if_updated, get_toc, download_truyen, make_ebook
 
 url = "https://truyenwikidich.net/truyen/your-novel-url"
-_, folder = check_if_updated(url)
 
-# Manually specify pages to download
-get_toc(
-    url_toc=url,
-    output_folder=folder,
-    check_pagination=True,
-    page_list=[1, 2, 3, 4, 5],
-    is_manual=True
-)
+# Step 1: Check for updates
+is_updated, folder = check_if_updated(url)
 
+# Step 2: Get table of contents
+get_toc(url, folder)
+
+# Step 3: Download chapters
 download_truyen(folder, latest_chapter_read=0)
+
+# Step 4: Create EPUB
 make_ebook(folder, latest_chapter_read=0)
 ```
 
-##### Using Individual Modules
+</details>
 
-```python
-# Import specific functions from modules
-from wikidich_ebook.scraper import get_url_content, setup_webdriver
-from wikidich_ebook.parser import parse_book_metadata
-from wikidich_ebook.models import BookInfo, Chapter
+<details>
+<summary><b>Click to expand: Building macOS App from Source</b></summary>
 
-# Use individual components
-soup = get_url_content("https://truyenwikidich.net/truyen/example")
-book_info = parse_book_metadata(soup, "https://truyenwikidich.net/truyen/example")
-print(f"Title: {book_info.title}")
-print(f"Author: {book_info.author}")
-```
+### Create Your Own DMG Installer
 
-## How It Works
-
-1. **Check for Updates**: Fetches book metadata and checks if new chapters are available
-2. **Download Cover**: Saves the book cover image locally
-3. **Extract TOC**: Scrapes the table of contents, including volume information
-4. **Download Chapters**: Downloads each chapter's HTML content with retry logic
-5. **Create EPUB**: Compiles all chapters into a properly formatted EPUB file
-
-## Output Structure
-
-```
-output-folder/
-├── info.json                    # Book metadata
-├── toc.csv                      # Table of contents
-├── output-folder_bookcover.jpg  # Cover image
-├── chap_0001.html              # Chapter files
-├── chap_0002.html
-├── ...
-├── download_log.log            # Download log
-└── BookTitle.epub              # Final EPUB file
-```
-
-## Data Classes
-
-### BookInfo
-Stores book metadata including title, author, status, URLs, and update information.
-
-### Chapter
-Represents a single chapter with chapter number, name, URL, and optional volume information.
-
-## Key Functions
-
-- `download_n_make_ebook_wikidich()`: Main workflow function
-- `check_if_updated()`: Check for new chapters
-- `get_toc()`: Extract table of contents
-- `download_truyen()`: Download all chapters
-- `make_ebook()`: Create EPUB file
-
-## Configuration
-
-### Constants
-
-- `CHAPTERS_PER_PAGE`: 501 (default pagination size)
-- `USER_AGENT`: Chrome user agent string
-- Font: Playwrite IT Moderna (auto-downloaded)
-
-### Custom Delays
-
-The script includes random delays (2-7 seconds) between chapter downloads to avoid rate limiting.
-
-## Google Colab Support
-
-The script includes Google Drive integration for Colab environments:
-
-```python
-from google.colab import drive
-drive.mount("/content/drive", force_remount=True)
-```
-
-EPUB files are automatically saved to `/content/drive/MyDrive/TongHopTruyenEpub/` if the path exists.
-
-## Features in Detail
-
-### Volume Detection
-- Automatically detects if a novel has multiple volumes
-- Creates nested TOC structure in EPUB when volumes are detected
-- Displays volume distribution statistics
-
-### Smart Resume
-- Tracks the latest chapter downloaded
-- Skips already downloaded chapters
-- Retry logic for failed downloads
-
-### Multi-page TOC Support
-- Auto-detects pagination
-- Can manually specify page ranges
-- Handles complex volume structures
-
-## Example
-
-```python
-# Download a complete novel
-from wikidich_ebook import download_n_make_ebook_wikidich
-
-download_n_make_ebook_wikidich(
-    url_toc="https://truyenwikidich.net/truyen/di-the-gioi-cua-hang-pho-kinh-doanh-chi--ZB2Do1S4CBIeL0Br",
-    latest_chapter_read=0,
-    use_volume_structure=False
-)
-```
-
-## Git Tracking
-
-The `.gitignore` file is configured to exclude all generated files from version control:
-
-- EPUB, MOBI, PDF files (all ebook formats)
-- Downloaded HTML chapter files
-- Book cover images
-- Metadata files (info.json, toc.csv)
-- Downloaded fonts
-- Book output folders
-- Python cache and virtual environments
-- Log files
-
-This ensures your repository stays clean and only tracks source code, not generated content. You can safely run the tool locally without worrying about accidentally committing large ebook files.
-
-## Building macOS App (DMG Distribution)
-
-Want to create a standalone macOS .app that can be distributed as a DMG? Follow these steps:
-
-### Prerequisites
+**Prerequisites:**
 - macOS 10.13+ (High Sierra or later)
 - Python 3.7+
 - Xcode Command Line Tools
 
-### Build Steps
+**Steps:**
 
-1. **Install build dependencies**:
+1. Install build tools:
    ```bash
    pip install -r requirements-build.txt
    ```
 
-2. **Run the build script** (requires sudo for cleaning previous builds):
+2. Build the app:
    ```bash
    sudo ./build_mac_app.sh
    ```
 
-   Note: `sudo` is required to clean previous build artifacts. You'll be prompted for your password.
+   Note: `sudo` is needed to clean old builds. Enter your password when prompted.
 
-3. **Find your DMG**:
+3. Find your DMG:
    ```bash
-   # The DMG will be in the dist/ folder
    ls dist/*.dmg
    ```
 
-### What Gets Built
+**Output:**
+- **App**: `dist/Wikidich Ebook Creator.app` (standalone macOS app)
+- **Installer**: `dist/WikidichEbookCreator-{version}.dmg` (~76MB, ready to share)
 
-- **`.app` bundle**: `dist/Wikidich Ebook Creator.app`
-  - Standalone macOS application
-  - Includes all dependencies
-  - No Python installation required for end users
+</details>
 
-- **`.dmg` installer**: `dist/WikidichEbookCreator-{version}.dmg`
-  - Drag-and-drop installer
-  - Compressed disk image (~70-80MB)
-  - Ready for distribution
+---
 
-### Distribution
+## ❓ Frequently Asked Questions
 
-Users can install by:
-1. Downloading the DMG file
-2. Opening it
-3. Dragging "Wikidich Ebook Creator" to Applications folder
-4. Launching from Applications
+<details>
+<summary><b>What formats does this create?</b></summary>
 
-### Auto-Update
+It creates EPUB files, which work on:
+- iPhones/iPads (Apple Books app)
+- Android phones/tablets (Google Play Books, Moon+ Reader, etc.)
+- Kindle devices (need to convert using Calibre)
+- Computers (Calibre, Adobe Digital Editions, etc.)
+- E-readers (Kobo, Nook, etc.)
 
-The app automatically:
-- Checks for updates on GitHub releases on startup
-- Notifies users when new versions are available
-- Opens download page with one click
-- Users just download new DMG and replace the app
+</details>
 
-### Creating a GitHub Release
+<details>
+<summary><b>Do I need to know programming?</b></summary>
 
-To enable auto-updates for users:
+**No!** If you use the macOS app, just download and click buttons. No coding needed.
 
-1. Create a new release on GitHub
-2. Tag it with version (e.g., `v2.0.0`)
-3. Upload the DMG file as a release asset
-4. Users' apps will detect and prompt to download
+If you use the command line or Python API, then yes, basic programming knowledge helps.
 
-## Troubleshooting
+</details>
 
-### ChromeDriver Issues
-Ensure ChromeDriver version matches your Chrome version. Update the download URL in the installation script if needed.
+<details>
+<summary><b>Can I use this on Windows?</b></summary>
 
-### Rate Limiting
-If you encounter rate limiting, the script includes automatic delays. You can increase the delay range in `download_chapters()`.
+Currently, the standalone app (DMG) is only for macOS.
 
-### Font Download Errors
-The script downloads fonts from globalfonts.pro. If this fails, manually download and place the font file in the working directory.
+Windows users can use the Python version:
+1. Install Python 3.7+
+2. Install Google Chrome
+3. Follow the "Installation from Source" instructions above
 
-## License
+</details>
 
-This project is provided as-is for personal use. Respect copyright laws and terms of service of the source website.
+<details>
+<summary><b>Is this legal?</b></summary>
 
-## Disclaimer
+This tool is for **personal backup and offline reading only**. Always:
+- Support the original authors and translators
+- Visit the official website
+- Respect copyright laws and terms of service
 
-This tool is for personal backup and offline reading purposes only. Please support the original authors and translators by visiting the official website.
+</details>
+
+<details>
+<summary><b>What if the download fails?</b></summary>
+
+The tool automatically retries failed downloads. If a chapter consistently fails:
+- Check your internet connection
+- Make sure the URL is correct
+- Try again later (the website might be down)
+- Check the log output for error details
+
+</details>
+
+<details>
+<summary><b>Can I download just part of a novel?</b></summary>
+
+Yes! Use the "Start Chapter" option in the GUI, or use `--start-chapter` in command line:
+
+```bash
+python3 main.py "URL" --start-chapter 100
+```
+
+This downloads from chapter 100 onwards.
+
+</details>
+
+<details>
+<summary><b>How do I update the app?</b></summary>
+
+**macOS App:**
+- The app checks for updates when you open it
+- If a new version exists, you'll see a notification
+- Click to download the new DMG
+- Install the new version (replaces the old one)
+
+**Python Version:**
+```bash
+git pull
+python3 setup_local.py  # Reinstall dependencies
+```
+
+</details>
+
+---
+
+## 🎯 How It Works
+
+Behind the scenes, the tool:
+
+1. **Fetches Information** - Gets book title, author, cover image, and chapter list
+2. **Downloads Chapters** - Visits each chapter page and saves the content
+3. **Creates EPUB** - Packages everything into a proper ebook file with formatting
+
+**Features:**
+- ⏱️ Smart delays between downloads (avoids overwhelming the server)
+- 🔄 Automatic retry for failed downloads
+- 📁 Organizes by volumes if the novel has them
+- 💾 Saves progress (skip already downloaded chapters)
+- 🎨 Includes custom fonts for better reading experience
+
+---
+
+## 📁 What Gets Created
+
+When you run the tool, it creates a folder with:
+
+```
+your-novel-name/
+├── info.json                    # Book information
+├── toc.csv                      # List of all chapters
+├── your-novel-name_bookcover.jpg  # Cover image
+├── chap_0001.html              # Chapter 1
+├── chap_0002.html              # Chapter 2
+├── ...
+├── download_log.log            # Download history
+└── YourNovelName.epub          # Final ebook! 📚
+```
+
+**The EPUB file** is what you want - copy it to your phone/tablet/e-reader!
+
+---
+
+## 🛠️ Troubleshooting
+
+<details>
+<summary><b>macOS won't let me open the app</b></summary>
+
+**First time only:**
+1. Right-click the app
+2. Click "Open"
+3. Click "Open" again in the warning dialog
+
+This tells macOS you trust the app. After this, normal double-click works.
+
+</details>
+
+<details>
+<summary><b>"ChromeDriver" error messages</b></summary>
+
+**If using Python version:**
+- Make sure Google Chrome is installed
+- Run `python3 setup_local.py` again
+- The script auto-downloads the correct ChromeDriver
+
+**If using macOS app:**
+- Make sure Google Chrome is installed on your Mac
+- The app manages ChromeDriver automatically
+
+</details>
+
+<details>
+<summary><b>Download is very slow</b></summary>
+
+This is normal! The tool:
+- Waits 2-7 seconds between chapters (to be nice to the server)
+- Downloads hundreds of chapters
+- A 300-chapter novel takes ~30-45 minutes
+
+You can see progress in real-time in the app.
+
+</details>
+
+<details>
+<summary><b>Some chapters failed to download</b></summary>
+
+The tool will retry automatically. If it still fails:
+- Check the chapter URL manually in your browser
+- The chapter might not exist or was deleted
+- Try running the tool again (it skips already downloaded chapters)
+
+</details>
+
+---
+
+## 🔧 Technical Details
+
+<details>
+<summary><b>Click to expand: Technologies Used</b></summary>
+
+- **Python 3.7+** - Main programming language
+- **PyQt6** - Modern GUI framework
+- **Selenium** - Web automation (controls Chrome browser)
+- **BeautifulSoup** - HTML parsing
+- **ebooklib** - EPUB file creation
+- **pandas** - Data processing
+- **webdriver-manager** - Automatic ChromeDriver management
+
+</details>
+
+<details>
+<summary><b>Click to expand: Project Structure</b></summary>
+
+```
+wikidich_ebook/
+├── wikidich_ebook/           # Main package
+│   ├── models.py             # Data structures
+│   ├── config.py             # Settings
+│   ├── scraper.py            # Web scraping
+│   ├── parser.py             # HTML parsing
+│   ├── downloader.py         # Chapter downloading
+│   ├── epub_builder.py       # EPUB creation
+│   └── workflow.py           # Main logic
+├── gui.py                    # GUI application
+├── main.py                   # Command line interface
+├── setup_local.py            # Installation script
+└── README.md                 # This file
+```
+
+</details>
+
+<details>
+<summary><b>Click to expand: Configuration</b></summary>
+
+Default settings (in `config.py`):
+- **Delay between downloads:** 2-7 seconds (random)
+- **Chapters per page:** 501
+- **Font:** Playwrite IT Moderna (auto-downloaded)
+- **Chrome User Agent:** Latest Chrome version
+
+You can modify these by editing the config file.
+
+</details>
+
+---
+
+## 📝 Version History
+
+### v2.1.0 (Latest)
+- ✨ Real-time progress bar showing chapter downloads
+- ✨ All CLI options now in GUI
+- 🐛 Fixed ChromeDriver compatibility (Chrome 115+)
+- 🐛 Fixed volume structure organization
+- 🎨 Cleaner log output
+- 📚 Improved documentation
+
+[See all releases →](https://github.com/ngocanh54/wikidich_ebook/releases)
+
+---
+
+## 💬 Support & Feedback
+
+- **Bug Reports:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
+- **Feature Requests:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
+- **Questions:** [Open a discussion](https://github.com/ngocanh54/wikidich_ebook/discussions)
+
+---
+
+## ⚖️ License & Disclaimer
+
+This project is provided **as-is for personal use only**.
+
+- ✅ Use for personal offline reading
+- ✅ Backup your favorite novels
+- ❌ Do not redistribute downloaded content
+- ❌ Do not use for commercial purposes
+
+**Please support original authors and translators** by visiting [truyenwikidich.net](https://truyenwikidich.net).
+
+---
+
+## 🙏 Credits
+
+- Built with ❤️ for Vietnamese novel readers
+- Uses [truyenwikidich.net](https://truyenwikidich.net) as source
+- Created with assistance from [Claude Code](https://claude.com/claude-code)
+
+---
+
+**Happy Reading! 📚✨**
