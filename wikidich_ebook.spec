@@ -110,12 +110,12 @@ app = BUNDLE(
     name='Wikidich Ebook Creator.app',
     icon=None,  # Add your icon path here if you have one
     bundle_identifier='com.wikidich.ebookcreator',
-    version='2.0.0',
+    version='2.1.0',
     info_plist={
         'CFBundleName': 'Wikidich Ebook Creator',
         'CFBundleDisplayName': 'Wikidich Ebook Creator',
-        'CFBundleShortVersionString': '2.0.0',
-        'CFBundleVersion': '2.0.0',
+        'CFBundleShortVersionString': '2.1.0',
+        'CFBundleVersion': '2.1.0',
         'CFBundlePackageType': 'APPL',
         'CFBundleSignature': '????',
         'CFBundleExecutable': 'WikidichEbookCreator',

@@ -34,7 +34,6 @@ class WorkerThread(QThread):
     log_signal = pyqtSignal(str)
     finished_signal = pyqtSignal(bool, str)
     status_signal = pyqtSignal(str)
-    progress_signal = pyqtSignal(int)  # Progress percentage (0-100)
 
     def __init__(self, url, output_folder, operation_mode='full', start_chapter=0,
                  volume_structure='auto', manual_pages=None):
@@ -49,6 +48,7 @@ class WorkerThread(QThread):
     def run(self):
         """Execute the download and ebook creation."""
         import sys
+        import re
         from io import StringIO
 
         old_stdout = sys.stdout
@@ -76,17 +76,13 @@ class WorkerThread(QThread):
             if self.output_folder:
                 os.chdir(self.output_folder)
 
-            self.progress_signal.emit(5)
-
             if self.operation_mode == 'check':
                 self.status_signal.emit("Checking for updates...")
                 self.log_signal.emit("\n" + "="*60 + "\n")
                 self.log_signal.emit("Operation: Check for Updates\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                self.progress_signal.emit(20)
                 is_updated, folder = check_if_updated(self.url)
-                self.progress_signal.emit(100)
 
                 if is_updated:
                     self.log_signal.emit(f"\n✓ Updates detected! Folder: {folder}\n")
@@ -101,9 +97,7 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Extract Table of Contents\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                self.progress_signal.emit(15)
                 is_updated, folder = check_if_updated(self.url)
-                self.progress_signal.emit(30)
 
                 get_toc(
                     self.url,
@@ -112,7 +106,6 @@ class WorkerThread(QThread):
                     page_list=page_list,
                     is_manual=is_manual
                 )
-                self.progress_signal.emit(100)
 
                 self.log_signal.emit("\n✓ TOC extracted successfully!\n")
                 self.finished_signal.emit(True, "TOC extracted successfully!")
@@ -123,13 +116,10 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Download Chapters\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                self.progress_signal.emit(10)
                 is_updated, folder = check_if_updated(self.url)
-                self.progress_signal.emit(20)
 
-                # Note: download_truyen shows its own progress in logs
+                # download_truyen shows its own progress via tqdm in logs
                 download_truyen(folder, self.start_chapter)
-                self.progress_signal.emit(100)
 
                 self.log_signal.emit("\n✓ Chapters downloaded successfully!\n")
                 self.finished_signal.emit(True, "Chapters downloaded successfully!")
@@ -140,12 +130,9 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Create EPUB\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                self.progress_signal.emit(10)
                 is_updated, folder = check_if_updated(self.url)
-                self.progress_signal.emit(25)
 
                 make_ebook(folder, self.start_chapter, volume_structure_value)
-                self.progress_signal.emit(100)
 
                 self.log_signal.emit("\n✓ EPUB created successfully!\n")
                 self.finished_signal.emit(True, "EPUB created successfully!")
@@ -156,18 +143,13 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Full Workflow (Download & Create EPUB)\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                self.progress_signal.emit(10)
-                self.status_signal.emit("Checking for updates...")
-
-                # Full workflow - emit progress at key milestones
-                # The actual download_n_make_ebook_wikidich will show detailed logs
+                # Full workflow - download_n_make_ebook_wikidich shows detailed logs
                 download_n_make_ebook_wikidich(
                     url_toc=self.url,
                     latest_chapter_read=self.start_chapter,
                     use_volume_structure=volume_structure_value
                 )
 
-                self.progress_signal.emit(100)
                 self.log_signal.emit("\n" + "="*60 + "\n")
                 self.log_signal.emit("✓ SUCCESS! EPUB created successfully!\n")
                 self.log_signal.emit("="*60 + "\n\n")
@@ -524,9 +506,8 @@ class WikidichEbookGUI(QMainWindow):
         # Disable button
         self.download_btn.setEnabled(False)
 
-        # Reset progress bar to show percentage
-        self.progress.setRange(0, 100)
-        self.progress.setValue(0)
+        # Set progress bar to indeterminate mode (animated) during execution
+        self.progress.setRange(0, 0)
 
         # Clear log
         self.log_text.clear()
@@ -543,7 +524,6 @@ class WikidichEbookGUI(QMainWindow):
         self.worker.log_signal.connect(self.append_log)
         self.worker.finished_signal.connect(self.download_finished)
         self.worker.status_signal.connect(self.update_status)
-        self.worker.progress_signal.connect(self.update_progress)
         self.worker.start()
 
     def append_log(self, text):
@@ -556,10 +536,6 @@ class WikidichEbookGUI(QMainWindow):
     def update_status(self, status):
         """Update status bar text."""
         self.status_label.setText(status)
-
-    def update_progress(self, value):
-        """Update progress bar value (thread-safe)."""
-        self.progress.setValue(value)
 
     def download_finished(self, success, message):
         """Handle download completion."""
