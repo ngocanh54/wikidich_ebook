@@ -28,6 +28,20 @@ from wikidich_ebook import (
 from wikidich_ebook.updater import check_for_updates
 
 
+class LogStream:
+    """Custom stream that emits output in real-time to the log signal."""
+
+    def __init__(self, log_signal):
+        self.log_signal = log_signal
+
+    def write(self, text):
+        if text.strip():  # Only emit non-empty text
+            self.log_signal.emit(text)
+
+    def flush(self):
+        pass  # Required for file-like object
+
+
 class WorkerThread(QThread):
     """Worker thread for downloading and creating ebook."""
 
@@ -49,10 +63,12 @@ class WorkerThread(QThread):
         """Execute the download and ebook creation."""
         import sys
         import re
-        from io import StringIO
 
+        # Redirect stdout and stderr to our custom stream for real-time logging
         old_stdout = sys.stdout
-        sys.stdout = StringIO()
+        old_stderr = sys.stderr
+        sys.stdout = LogStream(self.log_signal)
+        sys.stderr = LogStream(self.log_signal)
 
         # Parse volume structure
         volume_structure_value = None
@@ -155,11 +171,6 @@ class WorkerThread(QThread):
                 self.log_signal.emit("="*60 + "\n\n")
                 self.finished_signal.emit(True, "EPUB created successfully!")
 
-            # Get stdout output
-            output = sys.stdout.getvalue()
-            if output:
-                self.log_signal.emit(output)
-
         except Exception as e:
             error_msg = f"Error: {str(e)}"
             self.log_signal.emit(f"\n❌ {error_msg}\n")
@@ -167,6 +178,7 @@ class WorkerThread(QThread):
 
         finally:
             sys.stdout = old_stdout
+            sys.stderr = old_stderr
             self.status_signal.emit("Ready")
 
 
