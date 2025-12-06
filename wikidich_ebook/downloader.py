@@ -75,9 +75,12 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
 
     # Filter chapters
     chapters_to_download = [c for c in chapters if c.chapter_number >= latest_chapter_read]
+    total_chapters = len(chapters_to_download)
     num_fail = 0
 
-    for chapter in tqdm(chapters_to_download, desc="Downloading chapters"):
+    print(f"\n📥 Downloading {total_chapters} chapters...\n")
+
+    for idx, chapter in enumerate(chapters_to_download, 1):
         chapter_url = f"{url_pattern}{chapter.url.split('/')[-1]}"
         output_file = os.path.join(
             output_folder,
@@ -86,10 +89,12 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
 
         # Skip if already downloaded
         if os.path.exists(output_file):
+            print(f'[{idx}/{total_chapters}] ⏭️  Skip chapter {chapter.chapter_number}: already exists')
             logging.info(f'Skip chapter {chapter.chapter_number}: already exists')
             continue
 
         try:
+            print(f'[{idx}/{total_chapters}] ⬇️  Downloading chapter {chapter.chapter_number}: {chapter.chapter_name}')
             logging.info(f'Downloading chapter {chapter.chapter_number}: {chapter.chapter_name}')
 
             content = download_chapter_content(chapter_url)
@@ -102,8 +107,15 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
             time.sleep(random.randint(MIN_DELAY, MAX_DELAY))
 
         except Exception as e:
+            print(f'[{idx}/{total_chapters}] ❌ Failed chapter {chapter.chapter_number}: {e}')
             logging.error(f'Failed to download chapter {chapter.chapter_number}: {e}')
             num_fail += 1
+
+    # Summary
+    success_count = total_chapters - num_fail
+    print(f"\n✅ Download complete: {success_count}/{total_chapters} chapters successful")
+    if num_fail > 0:
+        print(f"⚠️  {num_fail} chapters failed")
 
     return num_fail
 
