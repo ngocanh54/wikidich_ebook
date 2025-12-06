@@ -269,9 +269,13 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
     # Determine whether to use volume structure
     if use_volume_structure is None:
         use_volume_structure = has_volumes  # Auto-detect
+    # If user forces yes/no, respect that choice
 
-    if use_volume_structure and has_volumes:
-        print(f"📚 Using volume structure ({volume_count} volumes) in EPUB TOC")
+    if use_volume_structure:
+        if has_volumes:
+            print(f"📚 Using volume structure ({volume_count} volumes) in EPUB TOC")
+        else:
+            print("📚 Forcing volume structure in EPUB TOC (user requested)")
     else:
         print("📖 Using flat chapter structure in EPUB TOC")
 
@@ -300,7 +304,7 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
     c_list, toc_list = add_chapters_to_epub(book, html_files, book_info.output_folder)
 
     # Set table of contents (with or without volume structure)
-    if use_volume_structure and has_volumes:
+    if use_volume_structure:
         # Create volume-based TOC structure
         chapter_map = {}
         for i, chapter_file in enumerate(html_files):
