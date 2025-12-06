@@ -4,61 +4,83 @@ A Python tool to download Vietnamese web novels from [truyenwikidich.net](https:
 
 ## Features
 
+- **Modern PyQt6 GUI**: User-friendly graphical interface for local use
 - **Automated Scraping**: Downloads complete novels with all chapters from truyenwikidich.net
 - **EPUB Generation**: Creates properly formatted EPUB files with custom fonts
 - **Volume Support**: Automatically detects and organizes chapters by volumes
 - **Smart Updates**: Checks for new chapters and only downloads what's needed
 - **Pagination Handling**: Automatically handles multi-page table of contents
 - **Resume Support**: Continue from a specific chapter number
+- **Auto ChromeDriver Management**: No manual ChromeDriver installation needed
 - **Offline Reading**: Read your favorite novels offline on any EPUB reader
+
+## Quick Start (Local Setup)
+
+### For Local Use (Windows/macOS/Linux)
+
+1. **Prerequisites**:
+   - Python 3.7+
+   - Google Chrome browser (ChromeDriver is auto-managed!)
+
+2. **Clone and Setup**:
+   ```bash
+   git clone https://github.com/ngocanh54/wikidich_ebook.git
+   cd wikidich_ebook
+
+   # Optional but recommended: Create virtual environment
+   python3 -m venv venv  # Use 'python' on Windows
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+   # Run automated setup
+   python3 setup_local.py  # Use 'python' on Windows
+   ```
+
+3. **Launch GUI**:
+   ```bash
+   python3 gui.py  # Use 'python' on Windows
+   ```
+
+That's it! The setup script will:
+- ✓ Check your Python version
+- ✓ Verify Google Chrome is installed
+- ✓ Install all Python dependencies
+- ✓ Automatically download and manage ChromeDriver (no manual setup needed!)
 
 ## Requirements
 
-### System Dependencies (Linux/Colab)
+### For Local Use (Recommended)
 
-```bash
-apt -y update
-apt install -y wget curl unzip equivs
-```
+**Minimal Requirements:**
+- Python 3.7 or higher
+- Google Chrome browser
+- That's it! ChromeDriver is automatically managed by `webdriver-manager`
 
-### Chrome and ChromeDriver
-
-The script requires Google Chrome and ChromeDriver for web scraping:
-
-```bash
-# Install libu2f-udev
-wget -O ./libu2f-udev.deb http://archive.ubuntu.com/ubuntu/pool/main/libu/libu2f-host/libu2f-udev_1.1.10-3.2_all.deb
-dpkg -i libu2f-udev.deb
-
-# Install Google Chrome Stable
-wget -O ./google-chrome-stable_current_amd64.deb https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/google-chrome-stable_142.0.7444.134-1_amd64.deb
-dpkg -i google-chrome-stable_current_amd64.deb
-
-# Install ChromeDriver
-wget -N https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/142.0.7444.134/linux64/chromedriver-linux64.zip -P /tmp/
-unzip -o /tmp/chromedriver-linux64.zip -d /tmp/
-chmod +x /tmp/chromedriver-linux64/chromedriver
-mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
-```
-
-### Python Dependencies
-
+**Python Dependencies** (installed automatically by `setup_local.py`):
 ```bash
 pip install -r requirements.txt
 ```
 
-Or install individually:
+Key dependencies:
+- PyQt6 (Modern GUI framework)
+- selenium (Web automation)
+- webdriver-manager (Automatic ChromeDriver management)
+- beautifulsoup4 (HTML parsing)
+- ebooklib (EPUB creation)
+- And more (see requirements.txt)
+
+### For Google Colab (Advanced Users)
+
+If using Google Colab, you'll need to manually install Chrome and ChromeDriver:
 
 ```bash
-pip install beautifulsoup4==4.11.2
-pip install selenium==4.0.0
-pip install webdriver-manager==3.8.5
-pip install unidecode==1.3.7
-pip install ebooklib==0.18
-pip install pandas
-pip install tqdm
-pip install requests
-pip install lxml
+apt -y update
+apt install -y wget curl unzip
+
+# Install Chrome
+wget -O ./google-chrome-stable_current_amd64.deb https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/google-chrome-stable_142.0.7444.134-1_amd64.deb
+dpkg -i google-chrome-stable_current_amd64.deb
+
+# ChromeDriver is auto-managed by webdriver-manager, no manual install needed!
 ```
 
 ## Project Structure
@@ -72,12 +94,14 @@ wikidich_ebook/
 │   ├── models.py             # Data classes (BookInfo, Chapter)
 │   ├── config.py             # Configuration and constants
 │   ├── utils.py              # Utility functions
-│   ├── scraper.py            # Web scraping functions
+│   ├── scraper.py            # Web scraping (auto ChromeDriver management)
 │   ├── parser.py             # HTML parsing functions
 │   ├── downloader.py         # Chapter downloading
 │   ├── epub_builder.py       # EPUB creation
 │   └── workflow.py           # Main workflow orchestration
+├── gui.py                    # PyQt6 GUI application
 ├── main.py                   # CLI entry point
+├── setup_local.py            # Local environment setup script
 ├── requirements.txt          # Python dependencies
 ├── .gitignore                # Git ignore file (excludes ebooks, downloads)
 └── README.md                 # This file
@@ -96,33 +120,58 @@ wikidich_ebook/
 
 ## Usage
 
-### Command Line Interface (Recommended)
+### 1. GUI Interface (Recommended for Local Use)
+
+Launch the modern PyQt6 interface:
+
+```bash
+python3 gui.py  # Use 'python' on Windows
+```
+
+**Features:**
+- 🎨 Clean, modern interface
+- 📊 Real-time progress tracking
+- 📝 Live log output
+- ⚙️ Easy configuration options
+- 🔘 Multiple operation modes (Full, Check, TOC, Download, EPUB)
+- 📁 Custom output folder selection
+
+**How to use:**
+1. Paste the novel's table of contents URL
+2. Configure options (start chapter, volume structure, output folder)
+3. Click "Download & Create EPUB" or choose specific operations
+4. Monitor progress in the log output
+5. Get notified when complete!
+
+### 2. Command Line Interface
 
 ```bash
 # Full workflow - download and create ebook
-python main.py "https://truyenwikidich.net/truyen/your-novel-url"
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url"
 
 # Start from a specific chapter
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --start-chapter 100
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --start-chapter 100
 
 # Force volume structure
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --volume-structure yes
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --volume-structure yes
 
 # Only check for updates
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --check-only
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --check-only
 
 # Only extract table of contents
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --toc-only
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --toc-only
 
 # Only download chapters (requires TOC)
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --download-only
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --download-only
 
 # Only create EPUB (requires downloaded chapters)
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --epub-only
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --epub-only
 
 # Manual pagination
-python main.py "https://truyenwikidich.net/truyen/your-novel-url" --pages "1,2,3,4,5"
+python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --pages "1,2,3,4,5"
 ```
+
+> **Note:** Use `python` instead of `python3` on Windows.
 
 ### Python API Usage
 
