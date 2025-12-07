@@ -4,6 +4,32 @@ Download Vietnamese web novels from [truyenwikidich.net](https://truyenwikidich.
 
 ---
 
+## ⚠️ Important Legal Notice
+
+**This tool is strictly for personal backup and offline reading purposes only.**
+
+By using this tool, you agree to:
+- ✅ Use downloaded content **for personal reading only**
+- ✅ **Support original authors and translators** by visiting [truyenwikidich.net](https://truyenwikidich.net)
+- ✅ **Respect copyright laws** and the website's terms of service
+- ✅ **Not redistribute or share** downloaded ebooks commercially
+- ❌ **Not use for commercial purposes** or mass redistribution
+- ❌ **Not violate** the source website's terms of service
+
+**The developers are not responsible for any misuse of this tool.**
+
+### Respectful Usage
+
+This tool includes automatic delays (2-7 seconds) between chapter downloads to:
+- ⏱️ Avoid overwhelming the server
+- 🤝 Be respectful to the website and its resources
+- 🛡️ Prevent your IP address from being blocked
+- 💚 Support the continued availability of the source website
+
+**Please use responsibly and support the original content creators.**
+
+---
+
 ## 📱 For Regular Users (Easiest Way)
 
 ### macOS Users - Just Download and Use!
@@ -467,9 +493,21 @@ You can modify these by editing the config file.
 
 ## 💬 Support & Feedback
 
-- **Bug Reports:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
-- **Feature Requests:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
-- **Questions:** [Open a discussion](https://github.com/ngocanh54/wikidich_ebook/discussions)
+Found a bug or have a suggestion? I'd love to hear from you!
+
+- **🐛 Bug Reports:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
+- **💡 Feature Requests:** [Open an issue](https://github.com/ngocanh54/wikidich_ebook/issues)
+- **❓ Questions:** [Open a discussion](https://github.com/ngocanh54/wikidich_ebook/discussions)
+
+### Contributing
+
+While I'm the primary maintainer, contributions are welcome! If you'd like to contribute:
+- Fork the repository
+- Make your changes
+- Open a pull request with a clear description
+- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md)
+
+**Note:** All contributions must respect the tool's purpose (personal offline reading only) and maintain respectful scraping practices.
 
 ---
 
