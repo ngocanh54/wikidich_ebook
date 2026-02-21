@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net and converts them to EPUB format. The tool is designed for **personal offline reading only** and includes respectful scraping practices (2-7 second delays between chapter downloads).
+Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net and wikicv.net and converts them to EPUB format. The tool is designed for **personal offline reading only** and includes respectful scraping practices (2-7 second delays between chapter downloads).
+
+**Supported Domains:**
+- `truyenwikidich.net` (original)
+- `wikicv.net` (new domain with same structure)
 
 **Version:** 2.1.0
 
@@ -25,7 +29,8 @@ pip install -r requirements.txt
 python3 gui.py
 
 # CLI - Download complete novel
-python3 main.py "https://truyenwikidich.net/truyen/novel-url"
+python3 main.py "https://wikicv.net/truyen/novel-url"
+# Or: python3 main.py "https://truyenwikidich.net/truyen/novel-url"
 
 # CLI - Resume from chapter 100
 python3 main.py "URL" --start-chapter 100
