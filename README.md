@@ -513,7 +513,9 @@ While I'm the primary maintainer, contributions are welcome! If you'd like to co
 
 ## ⚖️ License & Disclaimer
 
-This project is provided **as-is for personal use only**.
+This project is licensed under the **[MIT License](LICENSE)**.
+
+The code is free to use, modify, and distribute. However, please note:
 
 - ✅ Use for personal offline reading
 - ✅ Backup your favorite novels
