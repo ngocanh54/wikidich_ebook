@@ -26,6 +26,8 @@ playwright install chromium   # downloads Playwright's bundled Chromium (no syst
 python3 setup_local.py
 ```
 
+> Always activate `.venv` before running any commands: `source .venv/bin/activate`
+
 ### Running the Application
 ```bash
 # Launch GUI
@@ -66,6 +68,18 @@ uv pip install -r requirements-build.txt
 ./build_mac_app.sh
 
 # Output: dist/WikidichEbookCreator-{version}.dmg
+
+# Install to Applications (remove old bundle first — cp -R won't fully overwrite)
+rm -rf "/Applications/Wikidich Ebook Creator.app"
+cp -R "dist/Wikidich Ebook Creator.app" "/Applications/Wikidich Ebook Creator.app"
+```
+
+### Releasing
+```bash
+# 1. Bump version in wikidich_ebook/__init__.py only — spec file reads it dynamically
+# 2. Build, commit, push
+# 3. Update GitHub release DMG
+gh release upload vX.X.X "dist/WikidichEbookCreator-X.X.X.dmg" --clobber
 ```
 
 ## Architecture
@@ -84,11 +98,12 @@ The application follows a modular pipeline architecture:
    - Saves to `toc.csv` with chapter numbers, names, URLs, and volume info
 
 3. **Chapter Download** (`download_truyen()`)
-   - Downloads individual chapters using Selenium
+   - Downloads individual chapters using `requests` (no browser)
    - Implements respectful delays (2-7 seconds between requests)
    - Saves chapters as HTML files (`chap_0001.html`, etc.)
    - Logs progress to `download_log.log`
-   - Automatically retries failed downloads
+   - Retries up to `MAX_DOWNLOAD_RETRIES` passes; aborts early on `CONSECUTIVE_FAIL_LIMIT` consecutive failures (IP block signal)
+   - Returns `num_fail` (int) — `0` = complete, `>0` = partial/IP-blocked
 
 4. **EPUB Creation** (`make_ebook()`)
    - Downloads custom font (Playwrite IT Moderna)
@@ -102,7 +117,7 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
 
 - **workflow.py**: Orchestrates the entire process; entry point for both CLI and GUI
 - **models.py**: Data classes (`BookInfo`, `Chapter`)
-- **scraper.py**: `requests`-based fetching + Selenium WebDriver setup and chapter content extraction
+- **scraper.py**: `requests`-based fetching and chapter content extraction (no browser)
 - **parser.py**: BeautifulSoup HTML parsing for book metadata and TOC chapter extraction
 - **downloader.py**: Chapter downloading loop, retry logic, volume detection
 - **epub_builder.py**: EPUB file creation with ebooklib
@@ -168,7 +183,7 @@ There are no automated tests in this repository. When making changes:
 
 ## Common Pitfalls
 
-1. **Selenium WebDriver Issues**: Always use `webdriver-manager` to handle ChromeDriver versions. Don't hardcode driver paths.
+1. **Playwright in packaged app**: When running as a PyInstaller bundle, Playwright looks for browsers inside the `.app` bundle. `_ensure_playwright_browser()` in `workflow.py` overrides `PLAYWRIGHT_BROWSERS_PATH` to `~/Library/Caches/ms-playwright` and auto-installs if missing — don't remove this call.
 
 2. **Encoding Problems**: All file operations should use `encoding='utf-8'` for Vietnamese text support.
 
@@ -176,4 +191,8 @@ There are no automated tests in this repository. When making changes:
 
 4. **Volume Structure**: The `use_volume_structure` parameter in `make_ebook()` can be `True`, `False`, or `None` (auto-detect). Respect user choice when explicitly set.
 
-5. **macOS App Building**: The build script auto-detects `.venv` and uses it for Python and PyInstaller. No `sudo` needed — run as a normal user.
+5. **macOS App Building**: The build script auto-detects `.venv` and uses it for Python and PyInstaller. No `sudo` needed — run as a normal user. If `build/` or `dist/` are root-owned from a previous sudo build, clear them first: `sudo rm -rf build dist ~/Library/Application\ Support/pyinstaller`.
+
+6. **EPUB TOC for iBooks**: Volume headers must use `epub.Link` (not `epub.Section`). `epub.Section` has no `href` and is silently dropped by iBooks, leaving a broken TOC.
+
+7. **RTK intercepts `playwright install`**: Run `rtk proxy playwright install chromium` to bypass RTK filtering when installing Playwright browsers in this environment.
