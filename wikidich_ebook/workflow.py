@@ -294,7 +294,7 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
 
     # Load TOC
     toc_df = pd.read_csv(os.path.join(input_dir, 'toc.csv'))
-    latest_chapter = int(toc_df['chapter_number'].max())
+    total_chapters = int(toc_df['chapter_number'].max())
 
     # Load chapters with volume information
     all_chapters = [
@@ -329,12 +329,17 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
         if f.endswith('.html') and int(f.split('.')[-2].split('_')[1]) >= latest_chapter_read
     ])
 
+    # Derive actual last downloaded chapter from html files on disk
+    actual_last_chapter = (
+        max(int(f.split('.')[-2].split('_')[1]) for f in html_files)
+        if html_files else latest_chapter_read
+    )
+
     print(f"{book_info.title} - {book_info.author} ({book_info.status}) - "
-          f"Total chapters: {book_info.latest_chapter}")
-    print(f"Reading from chapter: {latest_chapter_read}")
+          f"Downloaded: chap {latest_chapter_read or 1}-{actual_last_chapter} / {total_chapters}")
 
     # Determine output title
-    output_title = determine_output_title(book_info, latest_chapter, latest_chapter_read)
+    output_title = determine_output_title(book_info, actual_last_chapter, latest_chapter_read, total_chapters)
     output_filename = f"{output_title}.epub"
 
     # Download font
@@ -372,9 +377,13 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
             volume_structure[vol_name].append(chapter_map[chapter_num]['epub_obj'])
 
         # Build nested TOC
+        # Use Link (not Section) for volume headers so iBooks can navigate to them
         toc_structure = []
         for vol_name, chapters in volume_structure.items():
-            toc_structure.append((epub.Section(vol_name), chapters))
+            if chapters:
+                vol_link = epub.Link(chapters[0].file_name, vol_name, f"vol_{vol_name.replace(' ', '_')}")
+                chapter_links = [epub.Link(c.file_name, c.title, c.id) for c in chapters]
+                toc_structure.append((vol_link, chapter_links))
 
         book.toc = toc_structure
         print(f"✓ Created TOC with {len(volume_structure)} volume sections")

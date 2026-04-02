@@ -12,30 +12,30 @@ from .config import FONT_FAMILY
 from .utils import download_file
 
 
-def determine_output_title(book_info: BookInfo, latest_chapter: int,
-                          latest_chapter_read: int) -> str:
+def determine_output_title(book_info: BookInfo, actual_last_chapter: int,
+                          latest_chapter_read: int, total_chapters: int) -> str:
     """
     Determine the appropriate output title based on book status and progress.
 
     Args:
         book_info: BookInfo object
-        latest_chapter: Latest chapter number available
-        latest_chapter_read: Chapter number to start from
+        actual_last_chapter: Last chapter number actually downloaded
+        latest_chapter_read: Chapter number started from (0 = beginning)
+        total_chapters: Total chapters in the novel (from TOC)
 
     Returns:
         Formatted output title
     """
-    status = book_info.status
     title = book_info.title
+    is_complete_novel = book_info.status == 'Hoàn thành'
+    is_full_download = actual_last_chapter >= total_chapters
 
-    if status == 'Hoàn thành' and latest_chapter_read == 0:
+    if is_complete_novel and is_full_download and latest_chapter_read == 0:
         return title
-    elif status == 'Hoàn thành' and latest_chapter_read > 0:
-        return f"{title} from {latest_chapter_read}"
-    elif status != 'Hoàn thành' and latest_chapter_read == 0:
-        return f"{title} to {latest_chapter}"
+    elif latest_chapter_read == 0:
+        return f"{title} to chap {actual_last_chapter}"
     else:
-        return f"{title} - from {latest_chapter_read} to {latest_chapter}"
+        return f"{title} chap {latest_chapter_read}-{actual_last_chapter}"
 
 
 def download_font(font_url: str, font_path: str) -> None:
