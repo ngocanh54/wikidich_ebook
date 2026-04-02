@@ -29,3 +29,7 @@ REQUEST_TIMEOUT = 30
 
 # WebDriver wait time (seconds)
 WEBDRIVER_WAIT = 2
+
+# Download retry settings
+MAX_DOWNLOAD_RETRIES = 3       # max full passes over failed chapters
+CONSECUTIVE_FAIL_LIMIT = 5     # abort if this many chapters fail in a row (IP block signal)

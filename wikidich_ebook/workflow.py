@@ -19,7 +19,7 @@ from .epub_builder import (
     add_chapters_to_epub
 )
 from .utils import extract_url_components, download_image
-from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH, USER_AGENT
+from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH, USER_AGENT, MAX_DOWNLOAD_RETRIES
 
 
 def check_if_updated(url_toc: str) -> Tuple[bool, str]:
@@ -219,16 +219,27 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
             print(f"  ... and {len(volume_dist) - 10} more volumes")
         print()
 
-    # Download with retry
+    # Download with retry (capped to avoid infinite loop on IP blocks)
     chapter_prefix = 'chap'
     num_fail = 1
+    attempt = 0
 
-    while num_fail > 0:
+    while num_fail > 0 and attempt < MAX_DOWNLOAD_RETRIES:
+        if attempt > 0:
+            print(f"\n🔄 Retry attempt {attempt}/{MAX_DOWNLOAD_RETRIES - 1} for {num_fail} failed chapters...")
+            logging.info(f"Retry attempt {attempt}/{MAX_DOWNLOAD_RETRIES - 1}: {num_fail} chapters still pending.")
+        attempt += 1
         num_fail = download_chapters(
             chapters, chapter_prefix, book_info.title, book_info.author,
             book_info.url_pattern, book_info.output_folder, latest_chapter_read,
             progress_callback
         )
+
+    if num_fail > 0:
+        msg = f"Gave up after {attempt} attempt(s) — {num_fail} chapters could not be downloaded. Likely IP rate-limited."
+        print(f"\n⛔ {msg}")
+        print("Try again later.")
+        logging.error(msg)
 
     print("Finish Downloading!")
 

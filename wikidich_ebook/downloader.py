@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from .models import Chapter
 from .scraper import download_chapter_content
-from .config import MIN_DELAY, MAX_DELAY
+from .config import MIN_DELAY, MAX_DELAY, CONSECUTIVE_FAIL_LIMIT
 
 
 def create_chapter_html(title: str, author: str, chapter_title: str,
@@ -78,6 +78,9 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
     chapters_to_download = [c for c in chapters if c.chapter_number >= latest_chapter_read]
     total_chapters = len(chapters_to_download)
     num_fail = 0
+    num_attempted = 0
+    consecutive_fails = 0
+    aborted = False
 
     print(f"\n📥 Downloading {total_chapters} chapters...\n")
 
@@ -96,7 +99,10 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
         if os.path.exists(output_file):
             print(f'[{idx}/{total_chapters}] ⏭️  Skip chapter {chapter.chapter_number}: already exists')
             logging.info(f'Skip chapter {chapter.chapter_number}: already exists')
+            consecutive_fails = 0
             continue
+
+        num_attempted += 1
 
         try:
             print(f'[{idx}/{total_chapters}] ⬇️  Downloading chapter {chapter.chapter_number}: {chapter.chapter_name}')
@@ -110,17 +116,39 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
 
             # Random delay to avoid rate limiting
             time.sleep(random.randint(MIN_DELAY, MAX_DELAY))
+            consecutive_fails = 0
 
         except Exception as e:
             print(f'[{idx}/{total_chapters}] ❌ Failed chapter {chapter.chapter_number}: {e}')
             logging.error(f'Failed to download chapter {chapter.chapter_number}: {e}')
             num_fail += 1
+            consecutive_fails += 1
+
+            if consecutive_fails >= CONSECUTIVE_FAIL_LIMIT:
+                aborted = True
+                remaining = total_chapters - idx
+                print(f"\n🚫 {consecutive_fails} consecutive failures — looks like an IP block. Stopping early.")
+                logging.error(
+                    f"IP block detected: {consecutive_fails} consecutive failures ending at chapter "
+                    f"{chapter.chapter_number} ({chapter.chapter_name}). "
+                    f"Aborting this pass with {remaining} chapters not yet attempted."
+                )
+                break
 
     # Summary
-    success_count = total_chapters - num_fail
-    print(f"\n✅ Download complete: {success_count}/{total_chapters} chapters successful")
-    if num_fail > 0:
-        print(f"⚠️  {num_fail} chapters failed")
+    success_count = num_attempted - num_fail
+    if aborted:
+        not_attempted = total_chapters - num_attempted
+        summary = (
+            f"Aborted: {success_count}/{num_attempted} attempted chapters successful, "
+            f"{num_fail} failed, {not_attempted} not reached."
+        )
+        print(f"\n🚫 {summary}")
+        logging.error(summary)
+    else:
+        print(f"\n✅ Download complete: {success_count}/{num_attempted} chapters successful")
+        if num_fail > 0:
+            print(f"⚠️  {num_fail} chapters failed")
 
     return num_fail
 
