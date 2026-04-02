@@ -16,11 +16,14 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 
 ### Setup
 ```bash
-# Initial setup (installs dependencies and configures ChromeDriver)
-python3 setup_local.py
+# Create venv and install dependencies
+uv venv .venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+playwright install chromium   # downloads Playwright's bundled Chromium (no system Chrome needed)
 
-# Install dependencies manually
-pip install -r requirements.txt
+# Or use the guided setup script
+python3 setup_local.py
 ```
 
 ### Running the Application
@@ -38,11 +41,20 @@ python3 main.py "URL" --start-chapter 100
 # CLI - Check for updates only
 python3 main.py "URL" --check-only
 
+# CLI - Extract TOC only
+python3 main.py "URL" --toc-only
+
 # CLI - Download chapters only (no EPUB creation)
 python3 main.py "URL" --download-only
 
 # CLI - Create EPUB from already downloaded chapters
 python3 main.py "URL" --epub-only
+
+# CLI - Force volume/flat structure in EPUB TOC
+python3 main.py "URL" --volume-structure yes   # or: no, auto (default)
+
+# CLI - Manual pagination (for novels with known page count)
+python3 main.py "URL" --pages "1,2,3,4,5"
 ```
 
 ### Building macOS App
@@ -86,23 +98,25 @@ The application follows a modular pipeline architecture:
 
 ### Module Responsibilities
 
-- **workflow.py**: Orchestrates the entire process, provides high-level functions
+The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports the full public API.
+
+- **workflow.py**: Orchestrates the entire process; entry point for both CLI and GUI
 - **models.py**: Data classes (`BookInfo`, `Chapter`)
-- **scraper.py**: Selenium-based web scraping, ChromeDriver management
-- **parser.py**: BeautifulSoup HTML parsing, metadata extraction
-- **downloader.py**: Chapter downloading logic, volume detection
+- **scraper.py**: `requests`-based fetching + Selenium WebDriver setup and chapter content extraction
+- **parser.py**: BeautifulSoup HTML parsing for book metadata and TOC chapter extraction
+- **downloader.py**: Chapter downloading loop, retry logic, volume detection
 - **epub_builder.py**: EPUB file creation with ebooklib
-- **utils.py**: Shared utilities (URL parsing, image downloading, etc.)
+- **utils.py**: Shared utilities (URL parsing, image downloading, safe filename creation)
 - **config.py**: Constants (USER_AGENT, delays, font settings, etc.)
 - **updater.py**: Update checking for GUI app
-- **main.py**: CLI interface with argparse
-- **gui.py**: PyQt6 GUI application
+- **main.py**: CLI interface with argparse (top-level, outside package)
+- **gui.py**: PyQt6 GUI application (top-level, outside package)
 
 ### Key Technical Details
 
 **Web Scraping:**
-- Uses Selenium with Chrome in headless mode
-- ChromeDriver auto-managed via webdriver-manager
+- Two-tier scraping: `get_url_content()` uses `requests` (lightweight, for metadata and chapter content); TOC navigation uses Playwright (requires JavaScript execution to handle pagination clicks)
+- Playwright uses its own bundled Chromium — no system Chrome or ChromeDriver needed
 - Respectful delays: `MIN_DELAY=2`, `MAX_DELAY=7` seconds
 - User-Agent spoofing to mimic Chrome browser
 
@@ -133,8 +147,8 @@ Always maintain the delay between chapter downloads (configured in `config.py`).
 - Avoid IP blocking
 - Respect the source website
 
-### ChromeDriver Compatibility
-The application requires Google Chrome to be installed. For Chrome 115+, webdriver-manager handles driver downloads automatically. If changing Selenium version, test with both older and newer Chrome versions.
+### Playwright Browser
+Playwright manages its own Chromium bundle — no system Chrome required. After installing dependencies, run `playwright install chromium` once to download the browser. If upgrading the `playwright` package, re-run this command as browser binaries are versioned alongside the package.
 
 ### Volume Structure Detection
 The code in `downloader.py:check_multiple_volumes()` looks for Vietnamese volume keywords:

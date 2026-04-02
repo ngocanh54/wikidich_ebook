@@ -4,12 +4,8 @@ Web scraping functions for wikidich ebook creator.
 import logging
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
-from .config import USER_AGENT, REQUEST_HEADERS, REQUEST_TIMEOUT
+from .config import REQUEST_HEADERS, REQUEST_TIMEOUT
 
 
 def get_url_content(url: str) -> BeautifulSoup:
@@ -32,34 +28,6 @@ def get_url_content(url: str) -> BeautifulSoup:
     except requests.RequestException as e:
         logging.error(f"Failed to fetch {url}: {e}")
         raise
-
-
-def setup_webdriver(headless: bool = True) -> webdriver.Chrome:
-    """
-    Set up and return a configured Chrome WebDriver.
-    Automatically downloads and manages the correct ChromeDriver version.
-
-    Args:
-        headless: Run Chrome in headless mode (default: True)
-
-    Returns:
-        Configured Chrome WebDriver instance
-    """
-    options = Options()
-    if headless:
-        options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument("--start-maximized")
-    options.add_argument(f"user-agent={USER_AGENT}")
-
-    # Suppress webdriver-manager logs
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-
-    # Use webdriver-manager to automatically download and manage ChromeDriver
-    service = Service(ChromeDriverManager().install())
-
-    return webdriver.Chrome(service=service, options=options)
 
 
 def download_chapter_content(chapter_url: str) -> str:

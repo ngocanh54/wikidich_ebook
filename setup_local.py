@@ -48,78 +48,20 @@ def check_python_version():
     return True
 
 
-def check_chrome():
-    """Check if Google Chrome is installed."""
-    print_header("Checking Google Chrome")
+def check_uv():
+    """Check if uv is installed."""
+    print_header("Checking uv")
 
-    system = platform.system()
-
-    # Define possible Chrome paths for each OS
-    if system == "Windows":
-        chrome_paths = [
-            Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
-            Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
-        ]
-    elif system == "Darwin":  # macOS
-        chrome_paths = [
-            Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-        ]
-    else:  # Linux
-        chrome_paths = [
-            Path("/usr/bin/google-chrome"),
-            Path("/usr/bin/chromium-browser"),
-            Path("/usr/bin/chromium"),
-        ]
-
-    # Check file paths
-    for chrome_path in chrome_paths:
-        if chrome_path.exists():
-            print_success(f"Google Chrome found at: {chrome_path}")
-            return True
-
-    # Try to find chrome in PATH
-    chrome_commands = ["google-chrome", "chrome", "chromium", "chromium-browser"]
-    for cmd in chrome_commands:
-        if shutil.which(cmd):
-            print_success(f"Google Chrome found in PATH: {cmd}")
-            return True
-
-    print_error("Google Chrome not found!")
-    print("\nGoogle Chrome is required for web scraping.")
-    print("Please install Google Chrome:\n")
-
-    if system == "Windows":
-        print("  Download from: https://www.google.com/chrome/")
-    elif system == "Darwin":
-        print("  Download from: https://www.google.com/chrome/")
-        print("  Or install via Homebrew:")
-        print("    brew install --cask google-chrome")
-    else:  # Linux
-        print("  Ubuntu/Debian:")
-        print("    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb")
-        print("    sudo dpkg -i google-chrome-stable_current_amd64.deb")
-        print("    sudo apt-get install -f")
-        print("\n  Fedora/RHEL:")
-        print("    sudo dnf install google-chrome-stable")
-        print("\n  Or download from: https://www.google.com/chrome/")
-
-    return False
-
-
-def check_pip():
-    """Check if pip is installed."""
-    print_header("Checking pip")
-
-    try:
-        subprocess.check_output([sys.executable, "-m", "pip", "--version"])
-        print_success("pip is installed")
+    if shutil.which("uv"):
+        result = subprocess.check_output(["uv", "--version"], text=True).strip()
+        print_success(f"uv is installed: {result}")
         return True
-    except subprocess.CalledProcessError:
-        print_error("pip is not installed!")
-        print("\nPlease install pip:")
-        print("  Download get-pip.py from: https://bootstrap.pypa.io/get-pip.py")
-        print(f"  Then run: {sys.executable} get-pip.py")
-        return False
+
+    print_warning("uv not found — will fall back to pip.")
+    print("\nTo install uv (recommended):")
+    print("  brew install uv          # macOS")
+    print("  pip install uv           # any platform")
+    return False
 
 
 def install_dependencies():
@@ -136,15 +78,13 @@ def install_dependencies():
         print("Installing packages from requirements.txt...")
         print("This may take a few minutes...\n")
 
-        subprocess.check_call([
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "-r",
-            str(requirements_file),
-            "--upgrade"
-        ])
+        use_uv = bool(shutil.which("uv"))
+        if use_uv:
+            subprocess.check_call(["uv", "pip", "install", "-r", str(requirements_file)])
+        else:
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "-r", str(requirements_file), "--upgrade"
+            ])
 
         print()
         print_success("All dependencies installed successfully!")
@@ -153,42 +93,32 @@ def install_dependencies():
     except subprocess.CalledProcessError as e:
         print_error(f"Failed to install dependencies: {e}")
         print("\nYou can try installing manually:")
-        print(f"  {sys.executable} -m pip install -r requirements.txt")
+        print("  uv pip install -r requirements.txt")
         return False
 
 
-def test_webdriver():
-    """Test if ChromeDriver can be set up automatically."""
-    print_header("Testing ChromeDriver Auto-Setup")
+def test_playwright():
+    """Install Playwright's bundled Chromium and verify it launches."""
+    print_header("Setting Up Playwright Chromium")
 
     try:
-        print("Testing automatic ChromeDriver download...")
-        from selenium import webdriver
-        from selenium.webdriver.chrome.service import Service
-        from selenium.webdriver.chrome.options import Options
-        from webdriver_manager.chrome import ChromeDriverManager
+        print("Installing Playwright's bundled Chromium browser...")
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
 
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-
-        print("Downloading/updating ChromeDriver (this may take a moment)...")
-        service = Service(ChromeDriverManager().install())
-
-        print("Starting Chrome in headless mode...")
-        driver = webdriver.Chrome(service=service, options=options)
-        driver.quit()
+        print("Verifying Playwright launches correctly...")
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            browser.close()
 
         print()
-        print_success("ChromeDriver setup successful!")
-        print("  webdriver-manager will automatically handle ChromeDriver versions")
+        print_success("Playwright setup successful!")
+        print("  No separate Chrome installation needed — Playwright bundles its own Chromium.")
         return True
 
     except Exception as e:
-        print_error(f"ChromeDriver test failed: {e}")
-        print("\nDon't worry! You can still try running the application.")
-        print("If problems persist, make sure Google Chrome is installed.")
+        print_error(f"Playwright setup failed: {e}")
+        print("\nTry manually: playwright install chromium")
         return False
 
 
@@ -232,8 +162,8 @@ def show_virtual_env_info():
             print("  1. Create: python -m venv venv")
             print("  2. Activate: venv\\Scripts\\activate")
         else:
-            print("  1. Create: python3 -m venv venv")
-            print("  2. Activate: source venv/bin/activate")
+            print("  1. Create: uv venv .venv")
+            print("  2. Activate: source .venv/bin/activate")
 
         print("  3. Run this script again: python setup_local.py")
 
@@ -278,8 +208,7 @@ def main():
 
     # Run system checks
     all_checks_passed &= check_python_version()
-    all_checks_passed &= check_chrome()
-    all_checks_passed &= check_pip()
+    check_uv()  # informational only, not required
 
     if not all_checks_passed:
         print("\n" + "="*70)
@@ -296,7 +225,7 @@ def main():
         sys.exit(1)
 
     # Test components
-    test_webdriver()  # This is optional, don't fail if it doesn't work
+    test_playwright()  # This is optional, don't fail if it doesn't work
     test_pyqt6()
 
     # Show usage

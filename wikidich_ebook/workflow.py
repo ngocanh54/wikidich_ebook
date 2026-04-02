@@ -3,16 +3,15 @@ Main workflow functions for wikidich ebook creator.
 """
 import os
 import json
-import time
 import logging
 import shutil
 from typing import Tuple, List, Optional
-from selenium.webdriver.common.by import By
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 import pandas as pd
 from ebooklib import epub
 
 from .models import BookInfo, Chapter
-from .scraper import get_url_content, setup_webdriver
+from .scraper import get_url_content
 from .parser import parse_book_metadata, extract_chapters_from_page
 from .downloader import download_chapters, check_multiple_volumes
 from .epub_builder import (
@@ -20,7 +19,7 @@ from .epub_builder import (
     add_chapters_to_epub
 )
 from .utils import extract_url_components, download_image
-from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH
+from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH, USER_AGENT
 
 
 def check_if_updated(url_toc: str) -> Tuple[bool, str]:
@@ -88,86 +87,88 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
     print(f"Getting TOC: {url_toc}")
     main_page_url, url_pattern = extract_url_components(url_toc)
 
-    driver = setup_webdriver()
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        browser_page = browser.new_page(user_agent=USER_AGENT)
 
-    try:
-        driver.get(url_toc)
-        driver.execute_script("location.reload()")
-        time.sleep(WEBDRIVER_WAIT)
+        try:
+            browser_page.goto(url_toc, wait_until="domcontentloaded")
+            browser_page.evaluate("location.reload()")
+            browser_page.wait_for_load_state("domcontentloaded")
 
-        # Auto-detect pagination if not manual
-        if not is_manual:
-            try:
-                pagination_elem = driver.find_element(
-                    By.XPATH,
-                    "//div[@class='volume-list']//div//ul[@class='pagination']"
-                )
-                page_list = pagination_elem.text.split()
-                check_pagination = True
-                print(f"Detected {len(page_list)} pages")
-            except:
-                check_pagination = False
-                page_list = []
-                print("Single page detected")
-
-        # Collect all chapters
-        all_chapters = []
-
-        if check_pagination and page_list:
-            for page_num in page_list:
-                print(f"Processing page {page_num}")
-
-                # Navigate to page
+            # Auto-detect pagination if not manual
+            if not is_manual:
                 try:
-                    page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
-                    xpath = f"//a[@data-start='{page_start}']"
-                    chosen_page = driver.find_element(By.XPATH, xpath)
+                    pagination_elem = browser_page.locator(
+                        "xpath=//div[@class='volume-list']//div//ul[@class='pagination']"
+                    ).first
+                    pagination_elem.wait_for(timeout=WEBDRIVER_WAIT * 1000)
+                    page_list = pagination_elem.inner_text().split()
+                    check_pagination = True
+                    print(f"Detected {len(page_list)} pages")
+                except PlaywrightTimeoutError:
+                    check_pagination = False
+                    page_list = []
+                    print("Single page detected")
 
-                    driver.execute_script("window.scrollTo(0, 200)")
-                    driver.execute_script("arguments[0].click();", chosen_page)
-                    driver.execute_script("window.scrollTo(0, 300)")
-                    time.sleep(WEBDRIVER_WAIT)
-                except Exception as e:
-                    logging.warning(f"Could not navigate to page {page_num}: {e}")
-                    continue
+            # Collect all chapters
+            all_chapters = []
 
-                # Extract chapters from this page
-                chapters = extract_chapters_from_page(driver, url_pattern, main_page_url)
-                all_chapters.extend(chapters)
+            if check_pagination and page_list:
+                for page_num in page_list:
+                    print(f"Processing page {page_num}")
 
-                time.sleep(1)
-        else:
-            # Single page
-            all_chapters = extract_chapters_from_page(driver, url_pattern, main_page_url)
+                    # Navigate to page
+                    try:
+                        page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
+                        chosen_page = browser_page.locator(
+                            f"xpath=//a[@data-start='{page_start}']"
+                        ).first
+                        browser_page.evaluate("window.scrollTo(0, 200)")
+                        chosen_page.click()
+                        browser_page.evaluate("window.scrollTo(0, 300)")
+                        browser_page.wait_for_timeout(WEBDRIVER_WAIT * 1000)
+                    except Exception as e:
+                        logging.warning(f"Could not navigate to page {page_num}: {e}")
+                        continue
 
-        # Deduplicate and assign chapter numbers
-        chapters_dict = {}  # Use dict to remove duplicates by (name, url)
+                    # Extract chapters from this page
+                    chapters = extract_chapters_from_page(browser_page, url_pattern, main_page_url)
+                    all_chapters.extend(chapters)
 
-        for chapter in all_chapters:
-            key = (chapter.chapter_name, chapter.url)
-            if key not in chapters_dict:
-                chapters_dict[key] = chapter
+                    browser_page.wait_for_timeout(1000)
+            else:
+                # Single page
+                all_chapters = extract_chapters_from_page(browser_page, url_pattern, main_page_url)
 
-        # Sort and assign numbers
-        unique_chapters = list(chapters_dict.values())
-        unique_chapters.sort(key=lambda c: all_chapters.index(
-            next(ch for ch in all_chapters if ch.chapter_name == c.chapter_name and ch.url == c.url)
-        ))
+        finally:
+            browser.close()
 
-        for i, chapter in enumerate(unique_chapters, start=1):
-            chapter.chapter_number = i
+    # Deduplicate and assign chapter numbers
+    chapters_dict = {}  # Use dict to remove duplicates by (name, url)
 
-        print(f"Total chapters found: {len(unique_chapters)}")
+    for chapter in all_chapters:
+        key = (chapter.chapter_name, chapter.url)
+        if key not in chapters_dict:
+            chapters_dict[key] = chapter
 
-        # Export to CSV using pandas (only place pandas is used for processing)
-        chapter_dicts = [c.to_dict() for c in unique_chapters]
-        df = pd.DataFrame(chapter_dicts)
-        csv_path = os.path.join(output_folder, 'toc.csv')
-        df.to_csv(csv_path, index=False, encoding='utf-8')
-        print(f"TOC saved to {csv_path}")
+    # Sort and assign numbers
+    unique_chapters = list(chapters_dict.values())
+    unique_chapters.sort(key=lambda c: all_chapters.index(
+        next(ch for ch in all_chapters if ch.chapter_name == c.chapter_name and ch.url == c.url)
+    ))
 
-    finally:
-        driver.quit()
+    for i, chapter in enumerate(unique_chapters, start=1):
+        chapter.chapter_number = i
+
+    print(f"Total chapters found: {len(unique_chapters)}")
+
+    # Export to CSV using pandas (only place pandas is used for processing)
+    chapter_dicts = [c.to_dict() for c in unique_chapters]
+    df = pd.DataFrame(chapter_dicts)
+    csv_path = os.path.join(output_folder, 'toc.csv')
+    df.to_csv(csv_path, index=False, encoding='utf-8')
+    print(f"TOC saved to {csv_path}")
 
 
 def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callback=None) -> None:

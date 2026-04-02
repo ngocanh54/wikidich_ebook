@@ -5,7 +5,7 @@ import re
 import logging
 from typing import Optional, List
 from bs4 import BeautifulSoup
-from selenium import webdriver
+from playwright.sync_api import Page
 
 from .models import BookInfo, Chapter
 from .utils import extract_url_components, create_safe_filename
@@ -89,20 +89,20 @@ def parse_book_metadata(soup: BeautifulSoup, url_toc: str) -> BookInfo:
     )
 
 
-def extract_chapters_from_page(driver: webdriver.Chrome, url_pattern: str,
+def extract_chapters_from_page(page: Page, url_pattern: str,
                                main_page_url: str) -> List[Chapter]:
     """
     Extract chapter links from the current page, including volume information.
 
     Args:
-        driver: Selenium WebDriver instance
+        page: Playwright Page instance
         url_pattern: Pattern to match chapter URLs
         main_page_url: Base URL of the site
 
     Returns:
         List of Chapter objects with volume information
     """
-    soup = BeautifulSoup(driver.page_source, 'lxml')
+    soup = BeautifulSoup(page.content(), 'lxml')
 
     # Build regex pattern for matching URLs
     pattern = re.compile(f"^({url_pattern.replace(main_page_url, '')})((?!:).)*$")
