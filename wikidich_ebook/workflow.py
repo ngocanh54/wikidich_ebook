@@ -272,6 +272,7 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         logging.error(msg)
 
     print("Finish Downloading!")
+    return num_fail
 
 
 def make_ebook(input_dir: str, latest_chapter_read: int = 0,

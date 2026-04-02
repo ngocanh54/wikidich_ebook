@@ -140,10 +140,14 @@ class WorkerThread(QThread):
                 is_updated, folder = check_if_updated(self.url)
 
                 # Pass progress callback for GUI progress bar
-                download_truyen(folder, self.start_chapter, self.progress_callback)
+                num_fail = download_truyen(folder, self.start_chapter, self.progress_callback)
 
-                self.log_signal.emit("\n✓ Chapters downloaded successfully!\n")
-                self.finished_signal.emit(True, "Chapters downloaded successfully!")
+                if num_fail and num_fail > 0:
+                    self.log_signal.emit(f"\n⚠️ Partial download: {num_fail} chapter(s) could not be downloaded due to IP restriction.\n")
+                    self.finished_signal.emit(True, f"Partial download complete — {num_fail} chapter(s) were skipped due to IP rate limiting.\n\nYou can run Download Chapters again later to resume.")
+                else:
+                    self.log_signal.emit("\n✓ Chapters downloaded successfully!\n")
+                    self.finished_signal.emit(True, "Chapters downloaded successfully!")
 
             elif self.operation_mode == 'epub':
                 self.status_signal.emit("Creating EPUB...")
@@ -472,11 +476,11 @@ class WikidichEbookGUI(QMainWindow):
             QMessageBox.warning(self, "Invalid URL", "URL must start with http:// or https://")
             return False
 
-        if "truyenwikidich.net" not in url:
+        if "truyenwikidich.net" not in url and "wikicv.net" not in url:
             reply = QMessageBox.question(
                 self,
                 "Confirm URL",
-                "This doesn't look like a truyenwikidich.net URL.\nContinue anyway?",
+                "This doesn't look like a truyenwikidich.net or wikicv.net URL.\nContinue anyway?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.No:
