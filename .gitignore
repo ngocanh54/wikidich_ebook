@@ -41,7 +41,7 @@ __pycache__/
 venv/
 env/
 ENV/
-.venv
+.venv/
 
 # IDE and editor files
 .vscode/
@@ -50,6 +50,7 @@ ENV/
 *.swo
 *~
 .DS_Store
+**/.DS_Store
 
 # Jupyter Notebook
 .ipynb_checkpoints

@@ -7,7 +7,6 @@ import random
 import logging
 from typing import List, Dict, Tuple
 from collections import OrderedDict
-from tqdm import tqdm
 
 from .models import Chapter
 from .scraper import download_chapter_content
