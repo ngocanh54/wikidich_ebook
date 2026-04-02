@@ -16,22 +16,16 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 
 ### Setup
 ```bash
-# Create venv and install dependencies
-uv venv .venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
-playwright install chromium   # downloads Playwright's bundled Chromium (no system Chrome needed)
-
-# Or use the guided setup script
-python3 setup_local.py
+make setup        # create .venv, install all deps, download Playwright Chromium
 ```
 
-> Always activate `.venv` before running any commands: `source .venv/bin/activate`
+> Always activate `.venv` before running commands outside make: `source .venv/bin/activate`
 
 ### Running the Application
 ```bash
 # Launch GUI
-python3 gui.py
+make run
+# or: python3 gui.py
 
 # CLI - Download complete novel
 python3 main.py "https://wikicv.net/truyen/novel-url"
@@ -61,25 +55,16 @@ python3 main.py "URL" --pages "1,2,3,4,5"
 
 ### Building macOS App
 ```bash
-# Install build dependencies (already included if using .venv)
-uv pip install -r requirements-build.txt
-
-# Build DMG installer
-./build_mac_app.sh
-
-# Output: dist/WikidichEbookCreator-{version}.dmg
-
-# Install to Applications (remove old bundle first — cp -R won't fully overwrite)
-rm -rf "/Applications/Wikidich Ebook Creator.app"
-cp -R "dist/Wikidich Ebook Creator.app" "/Applications/Wikidich Ebook Creator.app"
+make build        # build .app and .dmg
+make install      # copy to /Applications (removes old bundle first)
+make release      # build + install + git push + upload DMG to GitHub release
+make clean        # remove build/ and dist/ (handles root-owned artefacts with sudo)
 ```
 
 ### Releasing
 ```bash
 # 1. Bump version in wikidich_ebook/__init__.py only — spec file reads it dynamically
-# 2. Build, commit, push
-# 3. Update GitHub release DMG
-gh release upload vX.X.X "dist/WikidichEbookCreator-X.X.X.dmg" --clobber
+# 2. make release
 ```
 
 ## Architecture
