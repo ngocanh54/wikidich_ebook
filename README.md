@@ -38,7 +38,7 @@ This tool includes automatic delays (2-7 seconds) between chapter downloads to:
 
 1. **Download the App**
    - Go to [Releases](https://github.com/ngocanh54/wikidich_ebook/releases/latest)
-   - Download `WikidichEbookCreator-2.1.0.dmg`
+   - Download `WikidichEbookCreator-2.2.0.dmg`
 
 2. **Install**
    - Open the downloaded DMG file
@@ -86,9 +86,11 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
 
 ### Prerequisites
 
-- Python 3.7 or higher
-- Google Chrome browser
+- Python 3.9 or higher
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - Basic command line knowledge
+
+> No Chrome or ChromeDriver needed — the tool uses Playwright with its own bundled Chromium.
 
 ### Setup Steps
 
@@ -98,7 +100,15 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
    cd wikidich_ebook
    ```
 
-2. **Install Dependencies** (Automatic Setup)
+2. **Install Dependencies**
+
+   **Option A — Makefile (recommended, macOS/Linux):**
+   ```bash
+   make setup
+   ```
+   This creates `.venv`, installs all packages, and downloads the Playwright Chromium browser.
+
+   **Option B — setup script (cross-platform):**
    ```bash
    # On macOS/Linux:
    python3 setup_local.py
@@ -107,19 +117,10 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
    python setup_local.py
    ```
 
-   The setup script will:
-   - ✓ Check your Python version
-   - ✓ Verify Google Chrome is installed
-   - ✓ Install all required packages
-   - ✓ Set up ChromeDriver automatically
-
 3. **Launch the GUI**
    ```bash
-   # On macOS/Linux:
-   python3 gui.py
-
-   # On Windows:
-   python gui.py
+   make run
+   # or: source .venv/bin/activate && python3 gui.py
    ```
 
 </details>
@@ -129,29 +130,36 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
 
 ### Basic Commands
 
+Both `truyenwikidich.net` and `wikicv.net` URLs are supported.
+
 **Download a complete novel:**
 ```bash
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url"
+python3 main.py "https://wikicv.net/truyen/your-novel-url"
 ```
 
 **Resume from chapter 100:**
 ```bash
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --start-chapter 100
+python3 main.py "https://wikicv.net/truyen/your-novel-url" --start-chapter 100
 ```
 
 **Just check for new chapters:**
 ```bash
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --check-only
+python3 main.py "https://wikicv.net/truyen/your-novel-url" --check-only
 ```
 
 **Download chapters only (no EPUB yet):**
 ```bash
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --download-only
+python3 main.py "https://wikicv.net/truyen/your-novel-url" --download-only
 ```
 
 **Create EPUB from already downloaded chapters:**
 ```bash
-python3 main.py "https://truyenwikidich.net/truyen/your-novel-url" --epub-only
+python3 main.py "https://wikicv.net/truyen/your-novel-url" --epub-only
+```
+
+**Force volume/flat structure:**
+```bash
+python3 main.py "URL" --volume-structure yes   # or: no, auto (default)
 ```
 
 > **Note:** Use `python` instead of `python3` on Windows.
@@ -218,23 +226,24 @@ make_ebook(folder, latest_chapter_read=0)
 ### Create Your Own DMG Installer
 
 **Prerequisites:**
-- macOS 10.13+ (High Sierra or later)
-- Python 3.7+
+- macOS 10.15+ (Catalina or later)
+- Python 3.9+
 - Xcode Command Line Tools
+- [uv](https://docs.astral.sh/uv/)
 
 **Steps:**
 
 1. Install build tools:
    ```bash
-   pip install -r requirements-build.txt
+   make setup
    ```
 
 2. Build the app:
    ```bash
-   sudo ./build_mac_app.sh
+   make build
    ```
 
-   Note: `sudo` is needed to clean old builds. Enter your password when prompted.
+   No `sudo` needed. The script handles root-owned build artifacts automatically.
 
 3. Find your DMG:
    ```bash
@@ -330,7 +339,7 @@ This downloads from chapter 100 onwards.
 **Python Version:**
 ```bash
 git pull
-python3 setup_local.py  # Reinstall dependencies
+make setup  # Reinstall dependencies and Playwright browser
 ```
 
 </details>
@@ -389,16 +398,13 @@ This tells macOS you trust the app. After this, normal double-click works.
 </details>
 
 <details>
-<summary><b>"ChromeDriver" error messages</b></summary>
+<summary><b>Browser / Playwright errors</b></summary>
 
-**If using Python version:**
-- Make sure Google Chrome is installed
-- Run `python3 setup_local.py` again
-- The script auto-downloads the correct ChromeDriver
+The tool uses Playwright with a bundled Chromium — no Chrome installation needed.
 
-**If using macOS app:**
-- Make sure Google Chrome is installed on your Mac
-- The app manages ChromeDriver automatically
+**If you see "Executable doesn't exist" or similar:**
+- Run `make setup` (or `python3 setup_local.py`) to reinstall and download the browser
+- The macOS app auto-downloads Playwright Chromium on first launch
 
 </details>
 
@@ -431,13 +437,13 @@ The tool will retry automatically. If it still fails:
 <details>
 <summary><b>Click to expand: Technologies Used</b></summary>
 
-- **Python 3.7+** - Main programming language
+- **Python 3.9+** - Main programming language
 - **PyQt6** - Modern GUI framework
-- **Selenium** - Web automation (controls Chrome browser)
+- **Playwright** - Browser automation with bundled Chromium (no Chrome install needed)
 - **BeautifulSoup** - HTML parsing
 - **ebooklib** - EPUB file creation
 - **pandas** - Data processing
-- **webdriver-manager** - Automatic ChromeDriver management
+- **uv** - Fast Python package manager
 
 </details>
 
@@ -469,7 +475,8 @@ Default settings (in `config.py`):
 - **Delay between downloads:** 2-7 seconds (random)
 - **Chapters per page:** 501
 - **Font:** Playwrite IT Moderna (auto-downloaded)
-- **Chrome User Agent:** Latest Chrome version
+- **Retry passes:** up to 3 on failures; aborts early after 5 consecutive failures (IP block signal)
+- **User Agent:** Latest Chrome version
 
 You can modify these by editing the config file.
 
@@ -479,7 +486,17 @@ You can modify these by editing the config file.
 
 ## 📝 Version History
 
-### v2.1.0 (Latest)
+### v2.2.0 (Latest)
+- ✨ Migrated from Selenium to Playwright (no Chrome install needed)
+- ✨ Added wikicv.net domain support alongside truyenwikidich.net
+- ✨ IP block detection: stops download after 5 consecutive failures instead of looping forever
+- ✨ EPUB name reflects actual downloaded range when download is partial
+- ✨ Makefile for common development tasks (`make setup`, `make run`, `make build`, `make release`)
+- 🐛 Fixed iBooks volume TOC navigation
+- 🐛 Fixed app closing unexpectedly after IP block in Download-only mode
+- 🐛 Fixed EPUB version shown in app always reading from spec file at build time
+
+### v2.1.0
 - ✨ Real-time progress bar showing chapter downloads
 - ✨ All CLI options now in GUI
 - 🐛 Fixed ChromeDriver compatibility (Chrome 115+)
