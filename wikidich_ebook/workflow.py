@@ -4,9 +4,37 @@ Main workflow functions for wikidich ebook creator.
 import os
 import json
 import logging
+import platform
 import shutil
+import subprocess
+import sys
 from typing import Tuple, List, Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+# When running as a packaged app, Playwright looks for browsers inside the bundle.
+# Override to use the user's standard browser cache so the app stays small.
+def _ensure_playwright_browser() -> None:
+    """Set browser path to user cache and auto-install Chromium if missing."""
+    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        system = platform.system()
+        if system == "Darwin":
+            cache = os.path.expanduser("~/Library/Caches/ms-playwright")
+        elif system == "Windows":
+            cache = os.path.expanduser("~\\AppData\\Local\\ms-playwright")
+        else:
+            cache = os.path.expanduser("~/.cache/ms-playwright")
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = cache
+
+    # Auto-install Chromium if not present
+    try:
+        with sync_playwright() as pw:
+            pw.chromium.launch(headless=True).close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e) or "not found" in str(e).lower():
+            print("Playwright Chromium not found — installing now (one-time setup)...")
+            subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+        else:
+            raise
 import pandas as pd
 from ebooklib import epub
 
@@ -86,6 +114,8 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
     """
     print(f"Getting TOC: {url_toc}")
     main_page_url, url_pattern = extract_url_components(url_toc)
+
+    _ensure_playwright_browser()
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
