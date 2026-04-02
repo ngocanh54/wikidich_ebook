@@ -10,7 +10,7 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 - `truyenwikidich.net` (original)
 - `wikicv.net` (new domain with same structure)
 
-**Version:** 2.1.0
+**Version:** 2.2.0
 
 ## Development Commands
 
@@ -59,11 +59,11 @@ python3 main.py "URL" --pages "1,2,3,4,5"
 
 ### Building macOS App
 ```bash
-# Install build dependencies
-pip install -r requirements-build.txt
+# Install build dependencies (already included if using .venv)
+uv pip install -r requirements-build.txt
 
-# Build DMG installer (requires sudo for cleanup)
-sudo ./build_mac_app.sh
+# Build DMG installer
+./build_mac_app.sh
 
 # Output: dist/WikidichEbookCreator-{version}.dmg
 ```
@@ -176,4 +176,4 @@ There are no automated tests in this repository. When making changes:
 
 4. **Volume Structure**: The `use_volume_structure` parameter in `make_ebook()` can be `True`, `False`, or `None` (auto-detect). Respect user choice when explicitly set.
 
-5. **macOS App Building**: The build script requires `sudo` because it cleans old builds. This is intentional - don't remove the sudo requirement without understanding the cleanup process.
+5. **macOS App Building**: The build script auto-detects `.venv` and uses it for Python and PyInstaller. No `sudo` needed — run as a normal user.

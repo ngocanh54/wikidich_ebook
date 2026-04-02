@@ -2,7 +2,7 @@
 Wikidich Ebook Creator - A tool to download Vietnamese web novels and create EPUB ebooks.
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "Anh Nguyen"
 
 # Import main workflow function

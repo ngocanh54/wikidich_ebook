@@ -18,8 +18,20 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
+# Resolve Python and pip from .venv if present, otherwise system
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.venv/bin/python3" ]; then
+    PYTHON="$SCRIPT_DIR/.venv/bin/python3"
+    PYINSTALLER="$SCRIPT_DIR/.venv/bin/pyinstaller"
+    PIP_CMD="uv pip install"
+else
+    PYTHON="python3"
+    PYINSTALLER="pyinstaller"
+    PIP_CMD="$PYTHON -m pip install"
+fi
+
 # Get version from __init__.py
-VERSION=$(python3 -c "
+VERSION=$($PYTHON -c "
 import re
 with open('wikidich_ebook/__init__.py', 'r') as f:
     content = f.read()
@@ -29,21 +41,25 @@ with open('wikidich_ebook/__init__.py', 'r') as f:
 echo "📦 Building version: $VERSION"
 echo ""
 
-# Clean previous builds
+# Clean previous builds (use sudo if dirs are root-owned)
 echo "🧹 Cleaning previous builds..."
-rm -rf build dist
+if [ -d "build" ] && [ ! -w "build" ]; then
+    sudo rm -rf build dist
+else
+    rm -rf build dist
+fi
 echo "✓ Clean complete"
 echo ""
 
 # Install/upgrade build dependencies
 echo "📥 Installing build dependencies..."
-python3 -m pip install --upgrade pyinstaller
+$PIP_CMD -r requirements-build.txt
 echo "✓ Build dependencies installed"
 echo ""
 
 # Build the app with PyInstaller
 echo "🔨 Building macOS app with PyInstaller..."
-pyinstaller wikidich_ebook.spec --clean --noconfirm
+$PYINSTALLER wikidich_ebook.spec --clean --noconfirm
 echo "✓ App built successfully"
 echo ""
 
