@@ -5,7 +5,13 @@ Build with: pyinstaller wikidich_ebook.spec
 """
 
 import sys
+import re
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, collect_all
+
+# Read version dynamically from source so it never gets out of sync
+with open('wikidich_ebook/__init__.py', 'r') as _f:
+    _match = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", _f.read())
+    APP_VERSION = _match.group(1) if _match else '0.0.0'
 
 block_cipher = None
 
@@ -110,12 +116,12 @@ app = BUNDLE(
     name='Wikidich Ebook Creator.app',
     icon=None,  # Add your icon path here if you have one
     bundle_identifier='com.wikidich.ebookcreator',
-    version='2.1.0',
+    version=APP_VERSION,
     info_plist={
         'CFBundleName': 'Wikidich Ebook Creator',
         'CFBundleDisplayName': 'Wikidich Ebook Creator',
-        'CFBundleShortVersionString': '2.1.0',
-        'CFBundleVersion': '2.1.0',
+        'CFBundleShortVersionString': APP_VERSION,
+        'CFBundleVersion': APP_VERSION,
         'CFBundlePackageType': 'APPL',
         'CFBundleSignature': '????',
         'CFBundleExecutable': 'WikidichEbookCreator',
