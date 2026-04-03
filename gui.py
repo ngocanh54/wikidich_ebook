@@ -576,11 +576,23 @@ class WikidichEbookGUI(QMainWindow):
     def download_finished(self, success, message):
         """Handle download completion."""
         self.download_btn.setEnabled(True)
-        self.progress.setRange(0, 100)
-        self.progress.setValue(100 if success else 0)
-        self.progress.setFormat("%p%")  # Reset format to percentage
 
-        if success:
+        is_partial = success and message.startswith("Partial download")
+        if is_partial:
+            # Leave progress bar at its last real value (e.g. 805/1208)
+            pass
+        else:
+            self.progress.setRange(0, 100)
+            self.progress.setValue(100 if success else 0)
+            self.progress.setFormat("%p%")
+
+        if is_partial:
+            QMessageBox.warning(
+                self,
+                "Partial Download",
+                f"{message}\n\nLocation: {self.current_folder}"
+            )
+        elif success:
             QMessageBox.information(
                 self,
                 "Success! 🎉",
