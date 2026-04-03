@@ -181,3 +181,5 @@ There are no automated tests in this repository. When making changes:
 6. **EPUB TOC for iBooks**: Volume headers must use `epub.Link` (not `epub.Section`). `epub.Section` has no `href` and is silently dropped by iBooks, leaving a broken TOC.
 
 7. **RTK intercepts `playwright install`**: Run `rtk proxy playwright install chromium` to bypass RTK filtering when installing Playwright browsers in this environment.
+
+8. **GUI finished_signal for partial results**: `WorkerThread` emits `finished_signal(True, msg)` for both success and partial (IP-blocked) outcomes. In `download_finished`, detect partial by checking `message.startswith("Partial download")` — don't override the progress bar value in that case. Use `QMessageBox.warning` for partial, `QMessageBox.information` for full success.
