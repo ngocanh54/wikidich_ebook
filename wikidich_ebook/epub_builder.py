@@ -82,28 +82,17 @@ def create_epub_book(book_info: BookInfo, output_title: str, font_path: str) -> 
     font_item = epub.EpubItem(
         uid="main_font",
         file_name=f"fonts/{os.path.basename(font_path)}",
-        media_type="application/vnd.ms-opentype",
+        media_type="font/ttf",
         content=font_content
     )
     book.add_item(font_item)
 
-    # Add fonts CSS
-    fonts_css_content = f'''
+    # Single stylesheet: @font-face + body rules so chapters only need one link
+    stylesheet_content = f'''
     @font-face {{
       font-family: '{FONT_FAMILY}';
       src: url(../fonts/{os.path.basename(font_path)}) format('truetype');
     }}
-    '''
-    fonts_css = epub.EpubItem(
-        uid="font_embed",
-        file_name="style/fonts.css",
-        media_type="text/css",
-        content=fonts_css_content
-    )
-    book.add_item(fonts_css)
-
-    # Add stylesheet
-    stylesheet_content = f'''
     h1, body {{
       font-family: '{FONT_FAMILY}';
       font-style: normal;
