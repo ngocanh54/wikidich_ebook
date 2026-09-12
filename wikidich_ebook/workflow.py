@@ -266,7 +266,14 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         )
 
     if num_fail > 0:
-        msg = f"Gave up after {attempt} attempt(s) — {num_fail} chapters could not be downloaded. Likely IP rate-limited."
+        still_missing = sum(
+            1 for c in chapters
+            if c.chapter_number >= latest_chapter_read
+            and not os.path.exists(os.path.join(
+                book_info.output_folder, f"{chapter_prefix}_{c.chapter_number:04d}.html"
+            ))
+        )
+        msg = f"Gave up after {attempt} attempt(s) — {still_missing} chapters could not be downloaded. Likely IP rate-limited."
         print(f"\n⛔ {msg}")
         print("Try again later.")
         logging.error(msg)
