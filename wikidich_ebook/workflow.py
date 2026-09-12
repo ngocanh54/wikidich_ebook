@@ -41,7 +41,7 @@ from ebooklib import epub
 from .models import BookInfo, Chapter
 from .scraper import get_url_content
 from .parser import parse_book_metadata, extract_chapters_from_page
-from .downloader import download_chapters, check_multiple_volumes
+from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import (
     determine_output_title, download_font, create_epub_book,
     add_chapters_to_epub
@@ -359,39 +359,32 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
 
     # Set table of contents (with or without volume structure)
     if use_volume_structure:
-        # Create volume-based TOC structure
-        chapter_map = {}
+        # Map chapter number -> epub chapter object
+        epub_by_num = {}
         for i, chapter_file in enumerate(html_files):
             try:
                 chapter_num = int(chapter_file.split('.')[-2].split('_')[1])
-                chapter_obj = next(c for c in all_chapters if c.chapter_number == chapter_num)
                 if i < len(c_list):
-                    chapter_map[chapter_num] = {
-                        'epub_obj': c_list[i],
-                        'volume': chapter_obj.volume_name or "Main Story"
-                    }
-            except (IndexError, ValueError, StopIteration):
+                    epub_by_num[chapter_num] = c_list[i]
+            except (IndexError, ValueError):
                 continue
 
-        # Group by volumes
-        volume_structure = {}
-        for chapter_num in sorted(chapter_map.keys()):
-            vol_name = chapter_map[chapter_num]['volume']
-            if vol_name not in volume_structure:
-                volume_structure[vol_name] = []
-            volume_structure[vol_name].append(chapter_map[chapter_num]['epub_obj'])
+        # Group by volumes (shared with downloader.py's volume detection)
+        relevant_chapters = [c for c in all_chapters if c.chapter_number in epub_by_num]
+        volume_groups = group_chapters_by_volume(relevant_chapters)
 
         # Build nested TOC
         # Use Link (not Section) for volume headers so iBooks can navigate to them
         toc_structure = []
-        for vol_name, chapters in volume_structure.items():
-            if chapters:
-                vol_link = epub.Link(chapters[0].file_name, vol_name, f"vol_{vol_name.replace(' ', '_')}")
-                chapter_links = [epub.Link(c.file_name, c.title, c.id) for c in chapters]
+        for vol_name, vol_chapters in volume_groups.items():
+            epub_objs = [epub_by_num[c.chapter_number] for c in vol_chapters]
+            if epub_objs:
+                vol_link = epub.Link(epub_objs[0].file_name, vol_name, f"vol_{vol_name.replace(' ', '_')}")
+                chapter_links = [epub.Link(c.file_name, c.title, c.id) for c in epub_objs]
                 toc_structure.append((vol_link, chapter_links))
 
         book.toc = toc_structure
-        print(f"✓ Created TOC with {len(volume_structure)} volume sections")
+        print(f"✓ Created TOC with {len(volume_groups)} volume sections")
     else:
         # Use flat TOC structure
         book.toc = tuple(toc_list)
