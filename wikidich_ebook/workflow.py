@@ -182,11 +182,8 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
         if key not in chapters_dict:
             chapters_dict[key] = chapter
 
-    # Sort and assign numbers
+    # chapters_dict preserves first-seen order already, so no re-sort is needed
     unique_chapters = list(chapters_dict.values())
-    unique_chapters.sort(key=lambda c: all_chapters.index(
-        next(ch for ch in all_chapters if ch.chapter_name == c.chapter_name and ch.url == c.url)
-    ))
 
     for i, chapter in enumerate(unique_chapters, start=1):
         chapter.chapter_number = i
