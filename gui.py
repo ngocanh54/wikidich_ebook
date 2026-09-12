@@ -89,8 +89,15 @@ class WorkerThread(QThread):
             try:
                 page_list = [int(p.strip()) for p in self.manual_pages.split(',')]
                 is_manual = True
-            except:
-                pass
+            except ValueError:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
+                self.finished_signal.emit(
+                    False,
+                    f"Invalid Manual Pages value: '{self.manual_pages}'. "
+                    "Expected comma-separated page numbers (e.g. '1,2,3')."
+                )
+                return
 
         try:
             # Change to output folder
