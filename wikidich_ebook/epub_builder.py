@@ -132,7 +132,7 @@ def add_chapters_to_epub(book: epub.EpubBook, html_files: List[str],
 
         # Read and clean HTML
         with codecs.open(file_path, 'r', encoding='utf-8') as f:
-            html_raw = ''.join(s for s in f.read() if s.isprintable())
+            html_raw = ''.join(s for s in f.read() if s.isprintable() or s in '\n\t')
 
         # Fix font URL
         html_raw = html_raw.replace(
