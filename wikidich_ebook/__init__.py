@@ -19,7 +19,7 @@ from .models import BookInfo, Chapter
 
 # Import key functions that might be useful
 from .scraper import get_url_content, download_chapter_content
-from .parser import parse_book_metadata, extract_chapters_from_page
+from .parser import parse_book_metadata, extract_chapters_from_page, TocQuotaError
 from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import create_epub_book, add_chapters_to_epub
 
@@ -42,6 +42,7 @@ __all__ = [
     # Parser
     'parse_book_metadata',
     'extract_chapters_from_page',
+    'TocQuotaError',
 
     # Downloader
     'download_chapters',

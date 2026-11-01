@@ -7,8 +7,13 @@ from typing import Optional, List
 from bs4 import BeautifulSoup
 from playwright.sync_api import Page
 
+from .config import TOC_QUOTA_MARKER
 from .models import BookInfo, Chapter
 from .utils import extract_url_components, create_safe_filename
+
+
+class TocQuotaError(RuntimeError):
+    """The site replaced the chapter list with its access-quota notice."""
 
 
 def extract_cover_info(soup: BeautifulSoup, key: str) -> Optional[str]:
@@ -103,6 +108,12 @@ def extract_chapters_from_page(page: Page, url_pattern: str,
         List of Chapter objects with volume information
     """
     soup = BeautifulSoup(page.content(), 'lxml')
+
+    if TOC_QUOTA_MARKER in soup.get_text():
+        raise TocQuotaError(
+            "The site's chapter-list quota for your IP is used up, so no chapters were returned. "
+            "Wait a while and try again, or log in and verify your email on the site for more access."
+        )
 
     # Build regex pattern for matching URLs
     pattern = re.compile(f"^({url_pattern.replace(main_page_url, '')})((?!:).)*$")

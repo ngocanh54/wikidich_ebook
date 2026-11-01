@@ -90,3 +90,6 @@ chromedriver
 tmp/
 temp/
 *.tmp
+
+# Test fixtures are HTML on purpose
+!tests/fixtures/*.html

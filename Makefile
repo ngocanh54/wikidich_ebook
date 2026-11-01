@@ -1,18 +1,19 @@
 VENV      := .venv
 PYTHON    := $(VENV)/bin/python3
 UV        := uv
+PY_VERSION := 3.14
 APP_NAME  := Wikidich Ebook Creator
 APP_DEST  := /Applications/$(APP_NAME).app
 
 VERSION   := $(shell $(PYTHON) -c "import wikidich_ebook; print(wikidich_ebook.__version__)" 2>/dev/null || echo "0.0.0")
 DMG       := dist/WikidichEbookCreator-$(VERSION).dmg
 
-.PHONY: setup install-deps playwright run build install release clean help
+.PHONY: setup install-deps playwright run check build install release clean help
 
 ## ── Environment ────────────────────────────────────────────────────────────
 
 setup: ## Create .venv, install all deps, and download Playwright Chromium
-	$(UV) venv $(VENV)
+	$(UV) venv --clear --python $(PY_VERSION) $(VENV)
 	$(UV) pip install -r requirements-build.txt
 	$(VENV)/bin/playwright install chromium
 
@@ -20,6 +21,9 @@ setup: ## Create .venv, install all deps, and download Playwright Chromium
 
 run: ## Launch the GUI
 	$(PYTHON) gui.py
+
+check: ## Offline smoke check: parser, scraper, and EPUB build on HTML fixtures
+	QT_QPA_PLATFORM=offscreen $(PYTHON) tests/offline_check.py
 
 ## ── Build & Release ─────────────────────────────────────────────────────────
 

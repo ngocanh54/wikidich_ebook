@@ -9,6 +9,7 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 **Supported Domains:**
 - `truyenwikidich.net` (original)
 - `wikicv.net` (new domain with same structure)
+- `wikicv.org` (both old domains redirect here in a browser; chapter-list loads are limited per IP, and the quota notice raises `TocQuotaError`)
 
 **Version:** 2.2.0
 
@@ -16,8 +17,11 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 
 ### Setup
 ```bash
-make setup        # create .venv, install all deps, download Playwright Chromium
+make setup        # create .venv (Python 3.14, set by PY_VERSION in Makefile), install all deps, download Playwright Chromium
+make check        # offline smoke check, no network needed
 ```
+
+Supported Python: 3.12, 3.13 and 3.14 (all tested). Re-run `make setup` after changing `PY_VERSION`.
 
 > Always activate `.venv` before running commands outside make: `source .venv/bin/activate`
 
@@ -150,6 +154,18 @@ Always maintain the delay between chapter downloads (configured in `config.py`).
 ### Playwright Browser
 Playwright manages its own Chromium bundle — no system Chrome required. After installing dependencies, run `playwright install chromium` once to download the browser. If upgrading the `playwright` package, re-run this command as browser binaries are versioned alongside the package.
 
+### Dependencies
+- `requirements.txt`: lower bounds (oldest tested). `ebooklib` and `beautifulsoup4` stay exact because they are the fragile ones.
+- `requirements-build.txt`: exact `==` pins for the combination last tested; `make setup` and releases use it, so builds are reproducible.
+- Never bump a pin without running the matrix below.
+
+**Refresh checklist (about quarterly):**
+1. For each of Python 3.12, 3.13, 3.14 run `scripts/compat_check.sh --python X.Y --with-build` (file pins), then again with `--latest`. Add `--live <TOC_URL>` when the site quota allows.
+2. If something fails, bisect with `--pin pkg==x.y.z`.
+3. Copy the versions from "Installed versions" into `requirements-build.txt`, and the tested floor into `requirements.txt`.
+4. After a Playwright bump run `rtk proxy playwright install chromium`.
+5. `make check`, then `make build` and launch the packaged app.
+
 ### Volume Structure Detection
 The code in `downloader.py:check_multiple_volumes()` looks for Vietnamese volume keywords:
 - "Quyển" (volume)
@@ -159,7 +175,7 @@ When adding volume detection logic, ensure these keywords remain recognized.
 
 ## Testing Notes
 
-There are no automated tests in this repository. When making changes:
+`make check` (`tests/offline_check.py`) runs an offline smoke suite on synthetic HTML fixtures in `tests/fixtures/`. It proves the code works with the installed dependency versions; it cannot detect that the site changed its markup (see `tests/fixtures/README.md`). Run it after every change. It does not cover the GUI or live pages. When making changes:
 - Test the full pipeline: download → EPUB creation
 - Verify with a small novel first (under 50 chapters)
 - Check EPUB validity using Calibre or similar tools

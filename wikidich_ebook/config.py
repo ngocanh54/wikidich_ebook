@@ -27,6 +27,10 @@ GDRIVE_BASE_PATH = '/content/drive/MyDrive/TongHopTruyenEpub/'
 # Request timeout (seconds)
 REQUEST_TIMEOUT = 30
 
+# The site limits chapter-list (TOC) loads per IP. When the limit is hit, the list is replaced
+# by a notice ("Access quota exhausted. Log in and verify email for more.") and HTTP stays 200.
+TOC_QUOTA_MARKER = "Đã hết lượt truy cập"
+
 # WebDriver wait time (seconds)
 WEBDRIVER_WAIT = 2
 

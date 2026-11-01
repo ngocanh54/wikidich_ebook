@@ -33,13 +33,13 @@ def print_warning(text):
 
 
 def check_python_version():
-    """Check if Python version is 3.7 or higher."""
+    """Check if Python version is 3.12 or higher."""
     print_header("Checking Python Version")
     version = sys.version_info
     print(f"Python version: {version.major}.{version.minor}.{version.micro}")
 
-    if version.major < 3 or (version.major == 3 and version.minor < 7):
-        print_error("Python 3.7 or higher is required!")
+    if version.major < 3 or (version.major == 3 and version.minor < 12):
+        print_error("Python 3.12 or higher is required!")
         print("\nPlease upgrade Python:")
         print("  Download from: https://www.python.org/downloads/")
         return False

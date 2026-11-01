@@ -86,7 +86,7 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.12 or higher (tested on 3.12, 3.13 and 3.14)
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - Basic command line knowledge
 

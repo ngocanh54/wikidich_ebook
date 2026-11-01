@@ -145,19 +145,24 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
             all_chapters = []
 
             if check_pagination and page_list:
-                for page_num in page_list:
+                for idx, page_num in enumerate(page_list):
                     print(f"Processing page {page_num}")
+
+                    # Page 1 is already displayed after the initial load (auto-detect waited for
+                    # the pagination bar), and every click costs one of the site's TOC loads
+                    already_shown = idx == 0 and not is_manual and int(page_num) == 1
 
                     # Navigate to page
                     try:
-                        page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
-                        chosen_page = browser_page.locator(
-                            f"xpath=//a[@data-start='{page_start}']"
-                        ).first
-                        browser_page.evaluate("window.scrollTo(0, 200)")
-                        chosen_page.click()
-                        browser_page.evaluate("window.scrollTo(0, 300)")
-                        browser_page.wait_for_timeout(WEBDRIVER_WAIT * 1000)
+                        if not already_shown:
+                            page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
+                            chosen_page = browser_page.locator(
+                                f"xpath=//a[@data-start='{page_start}']"
+                            ).first
+                            browser_page.evaluate("window.scrollTo(0, 200)")
+                            chosen_page.click()
+                            browser_page.evaluate("window.scrollTo(0, 300)")
+                            browser_page.wait_for_timeout(WEBDRIVER_WAIT * 1000)
                     except Exception as e:
                         logging.warning(f"Could not navigate to page {page_num}: {e}")
                         continue
@@ -189,6 +194,10 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
         chapter.chapter_number = i
 
     print(f"Total chapters found: {len(unique_chapters)}")
+
+    # Never replace a previous toc.csv with an empty one
+    if not unique_chapters:
+        raise ValueError(f"No chapters were found on {url_toc}; toc.csv was not written.")
 
     # Export to CSV using pandas (only place pandas is used for processing)
     chapter_dicts = [c.to_dict() for c in unique_chapters]
