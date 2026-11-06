@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QLabel, QLineEdit, QPushButton, QTextEdit,
     QProgressBar, QFileDialog, QMessageBox, QSpinBox, QComboBox, QFrame, QGridLayout
 )
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl, QEvent
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QAction
 
 # Add parent directory to path
@@ -352,6 +352,7 @@ class WikidichEbookGUI(QMainWindow):
         self.statusBar().addWidget(self.status_label)
 
         self.apply_theme()
+        QApplication.styleHints().colorSchemeChanged.connect(lambda _scheme: self.apply_theme())
 
     def _field_label(self, text):
         label = QLabel(text)
@@ -386,18 +387,14 @@ class WikidichEbookGUI(QMainWindow):
         layout.addStretch(1)
         return side
 
-    def apply_theme(self):
-        """Apply the stylesheet matching the system light/dark setting."""
-        dark = QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+    def apply_theme(self, dark=None):
+        """Apply the stylesheet matching the system light/dark setting (or `dark` if given)."""
+        if dark is None:
+            dark = QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
         if dark == getattr(self, "_dark", None):
-            return  # setStyleSheet itself fires change events; avoid a loop
+            return  # unchanged
         self._dark = dark
         self.setStyleSheet(build_stylesheet(dark=dark))
-
-    def changeEvent(self, event):
-        super().changeEvent(event)
-        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "banner"):
-            self.apply_theme()
 
     def browse_folder(self):
         """Open folder browser dialog."""

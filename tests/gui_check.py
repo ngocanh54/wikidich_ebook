@@ -40,4 +40,25 @@ ev = QCloseEvent(); w.closeEvent(ev); assert not ev.isAccepted() and not FakeWor
 QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
 ev = QCloseEvent(); w.closeEvent(ev); assert ev.isAccepted() and FakeWorker.terminated
 w.worker = None
+# theme switch (offscreen ignores the system scheme, so pass it explicitly)
+w.apply_theme(True); assert w._dark is True and "#1B1626" in w.styleSheet()
+w.apply_theme(False); assert w._dark is False and "#FBF8FF" in w.styleSheet()
+
+# real WorkerThread against a dead local URL (no site traffic): must end via download_finished
+import tempfile
+seen = []
+orig = w.download_finished
+w.download_finished = lambda ok, msg: (seen.append((ok, msg)), orig(ok, msg))
+w.current_folder = tempfile.mkdtemp()
+w.url_input.setText("http://127.0.0.1:9/truyen/none")
+w.operation_combo.setCurrentText("Extract TOC Only")
+QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
+w.start_download()
+assert not w.download_btn.isEnabled()
+import time
+t = time.time()
+while w.worker is not None and time.time() - t < 90:
+    app.processEvents(); time.sleep(0.1)
+assert w.worker is None and seen and w.download_btn.isEnabled(), seen
+print("worker failure path ended:", seen[0][0], seen[0][1][:80])
 print("GUI states OK")
