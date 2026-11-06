@@ -151,7 +151,15 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
 
                     # Page 1 is already displayed after the initial load (auto-detect waited for
                     # the pagination bar), and every click costs one of the site's TOC loads
-                    already_shown = idx == 0 and not is_manual and int(page_num) == 1
+                    already_shown = idx == 0 and int(page_num) == 1
+                    if already_shown and is_manual:
+                        # Manual mode skipped the pagination wait; let the list render first
+                        try:
+                            browser_page.locator(
+                                "xpath=//div[@class='volume-list']"
+                            ).first.wait_for(timeout=WEBDRIVER_WAIT * 1000)
+                        except PlaywrightTimeoutError:
+                            logging.warning("volume-list did not appear on page 1")
 
                     # Navigate to page
                     try:
