@@ -25,4 +25,19 @@ w.operation_combo.setCurrentText("Extract TOC Only"); assert "Table" in w.downlo
 w.apply_theme(); w.setStyleSheet(gui.build_stylesheet(dark=True)); w.grab().save(f"{out}/dark.png")
 w.url_input.setText("https://wikicv.org/truyen/x"); assert w.validate_inputs()
 assert "&&" in w.download_btn.text() or "Table" in w.download_btn.text()
+# resize, and start/quit flow with a fake running worker
+for size in ((760, 560), (1400, 900)):
+    w.resize(*size); app.processEvents(); assert w.log_text.isVisible()
+class FakeWorker:
+    terminated = False
+    def isRunning(self): return True
+    def terminate(self): FakeWorker.terminated = True
+    def wait(self): pass
+w.worker = FakeWorker()
+from PyQt6.QtGui import QCloseEvent
+QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
+ev = QCloseEvent(); w.closeEvent(ev); assert not ev.isAccepted() and not FakeWorker.terminated
+QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
+ev = QCloseEvent(); w.closeEvent(ev); assert ev.isAccepted() and FakeWorker.terminated
+w.worker = None
 print("GUI states OK")
