@@ -16,11 +16,6 @@ CHAPTERS_PER_PAGE = 501
 MIN_DELAY = 2
 MAX_DELAY = 7
 
-# Font settings
-FONT_URL = "https://globalfonts.pro/global_files/66801a2f97374efc5054716d/files/PlaywriteITModerna-Regular.ttf"
-FONT_FILENAME = "Playwrite-IT-Moderna-Regular.ttf"
-FONT_FAMILY = "Playwrite IT Moderna"
-
 # Google Drive path (for Colab environments)
 GDRIVE_BASE_PATH = '/content/drive/MyDrive/TongHopTruyenEpub/'
 

@@ -96,7 +96,6 @@ The application follows a modular pipeline architecture:
    - Returns `num_fail` (int) — `0` = complete, `>0` = partial/IP-blocked
 
 4. **EPUB Creation** (`make_ebook()`)
-   - Downloads custom font (Playwrite IT Moderna)
    - Builds EPUB file with proper structure
    - Optionally organizes by volumes
    - Adds metadata, cover image, and styling
@@ -112,7 +111,7 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
 - **downloader.py**: Chapter downloading loop, retry logic, volume detection
 - **epub_builder.py**: EPUB file creation with ebooklib
 - **utils.py**: Shared utilities (URL parsing, image downloading, safe filename creation)
-- **config.py**: Constants (USER_AGENT, delays, font settings, etc.)
+- **config.py**: Constants (USER_AGENT, delays, etc.)
 - **updater.py**: Update checking for GUI app
 - **main.py**: CLI interface with argparse (top-level, outside package)
 - **gui.py**: PyQt6 GUI application (top-level, outside package); sidebar layout, styled by `wikidich_ebook/gui_style.py` (pastel light/dark, follows system)
@@ -139,7 +138,7 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
   ```
 
 **EPUB Generation:**
-- Custom font embedded: Playwrite IT Moderna
+- No embedded font: the reader's own font is used (a minimal stylesheet is still linked by every chapter)
 - Volume structure detection (looks for "Quyển" or "Tập" keywords)
 - CSS styling included for proper Vietnamese text rendering
 - Metadata preserved (title, author, language=vi)

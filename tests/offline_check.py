@@ -38,9 +38,8 @@ CHAPTER_TEXT = "Đây là đoạn văn đầu tiên của chương."
 CHAPTER_AD = "Quảng cáo"
 CHAPTER_BARE_TEXT = "Văn bản trần"
 
-# Placeholder bytes: ebooklib stores cover and font content without decoding it.
+# Placeholder bytes: ebooklib stores cover content without decoding it.
 FAKE_COVER = b"\xff\xd8\xff\xd9"
-FAKE_FONT = b"\x00\x01\x00\x00fake-font"
 
 
 def read_fixture(name):
@@ -112,15 +111,9 @@ def build_book(toc_fixture, toc_url):
 
 
 def run_make_ebook(info, use_volume_structure):
-    """Run the real make_ebook() with only the font download stubbed."""
+    """Run the real make_ebook() (no network is needed any more)."""
     from wikidich_ebook import workflow
-
-    def fake_font(url, path):
-        with open(path, "wb") as f:
-            f.write(FAKE_FONT)
-
-    with mock.patch.object(workflow, "download_font", fake_font):
-        workflow.make_ebook(info.output_folder, 0, use_volume_structure)
+    workflow.make_ebook(info.output_folder, 0, use_volume_structure)
 
 
 def inspect_epub(path, expected_title, expected_chapters):
@@ -134,7 +127,7 @@ def inspect_epub(path, expected_title, expected_chapters):
         assert first.compress_type == zipfile.ZIP_STORED, "mimetype must be stored uncompressed"
         assert z.read("mimetype") == b"application/epub+zip"
         names = z.namelist()
-        assert any(n.endswith(".ttf") for n in names), "embedded font missing"
+        assert not any(n.endswith((".ttf", ".otf", ".woff")) for n in names), "a font was embedded"
         assert any(n.endswith("stylesheet.css") for n in names), "stylesheet missing"
         chap1 = next((n for n in names if n.endswith("chap_0001.xhtml")), None)
         assert chap1, "chap_0001.xhtml missing"

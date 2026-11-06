@@ -359,7 +359,6 @@ Behind the scenes, the tool:
 - 🔄 Automatic retry for failed downloads
 - 📁 Organizes by volumes if the novel has them
 - 💾 Saves progress (skip already downloaded chapters)
-- 🎨 Includes custom fonts for better reading experience
 
 ---
 
@@ -474,7 +473,6 @@ wikidich_ebook/
 Default settings (in `config.py`):
 - **Delay between downloads:** 2-7 seconds (random)
 - **Chapters per page:** 501
-- **Font:** Playwrite IT Moderna (auto-downloaded)
 - **Retry passes:** up to 3 on failures; aborts early after 5 consecutive failures (IP block signal)
 - **User Agent:** Latest Chrome version
 

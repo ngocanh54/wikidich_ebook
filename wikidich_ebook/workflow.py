@@ -43,11 +43,11 @@ from .scraper import get_url_content, resolve_book_url
 from .parser import parse_book_metadata, extract_chapters_from_page
 from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import (
-    determine_output_title, download_font, create_epub_book,
+    determine_output_title, create_epub_book,
     add_chapters_to_epub
 )
 from .utils import extract_url_components, download_image
-from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH, USER_AGENT, MAX_DOWNLOAD_RETRIES
+from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, GDRIVE_BASE_PATH, USER_AGENT, MAX_DOWNLOAD_RETRIES
 
 
 def check_if_updated(url_toc: str) -> Tuple[bool, str]:
@@ -357,12 +357,8 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
     output_title = determine_output_title(book_info, actual_last_chapter, latest_chapter_read, total_chapters)
     output_filename = f"{output_title}.epub"
 
-    # Download font
-    font_path = FONT_FILENAME
-    download_font(FONT_URL, font_path)
-
     # Create EPUB book
-    book = create_epub_book(book_info, output_title, font_path)
+    book = create_epub_book(book_info, output_title)
 
     # Add chapters
     c_list, toc_list = add_chapters_to_epub(book, html_files, book_info.output_folder)

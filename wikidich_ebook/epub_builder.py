@@ -8,8 +8,6 @@ from bs4 import BeautifulSoup
 from ebooklib import epub
 
 from .models import BookInfo
-from .config import FONT_FAMILY
-from .utils import download_file
 
 
 def determine_output_title(book_info: BookInfo, actual_last_chapter: int,
@@ -38,25 +36,13 @@ def determine_output_title(book_info: BookInfo, actual_last_chapter: int,
         return f"{title} chap {latest_chapter_read}-{actual_last_chapter}"
 
 
-def download_font(font_url: str, font_path: str) -> None:
-    """
-    Download font file for EPUB.
-
-    Args:
-        font_url: URL of the font file
-        font_path: Local path to save the font
-    """
-    download_file(font_url, font_path)
-
-
-def create_epub_book(book_info: BookInfo, output_title: str, font_path: str) -> epub.EpubBook:
+def create_epub_book(book_info: BookInfo, output_title: str) -> epub.EpubBook:
     """
     Create and configure an EPUB book object.
 
     Args:
         book_info: BookInfo object
         output_title: Title for the output file
-        font_path: Path to the font file
 
     Returns:
         Configured EpubBook object
@@ -75,30 +61,13 @@ def create_epub_book(book_info: BookInfo, output_title: str, font_path: str) -> 
     book.set_language('vi')
     book.add_metadata(None, 'meta', '-epub-media-overlay-active', {'property': 'media:active-class'})
 
-    # Add font
-    with open(font_path, 'rb') as f:
-        font_content = f.read()
-
-    font_item = epub.EpubItem(
-        uid="main_font",
-        file_name=f"fonts/{os.path.basename(font_path)}",
-        media_type="font/ttf",
-        content=font_content
-    )
-    book.add_item(font_item)
-
-    # Single stylesheet: @font-face + body rules so chapters only need one link
-    stylesheet_content = f'''
-    @font-face {{
-      font-family: '{FONT_FAMILY}';
-      src: url(../fonts/{os.path.basename(font_path)}) format('truetype');
-    }}
-    h1, body {{
-      font-family: '{FONT_FAMILY}';
+    # Single stylesheet linked by every chapter. No embedded font: the reader's own font is used.
+    stylesheet_content = '''
+    h1, body {
       font-style: normal;
       font-weight: normal;
       font-size: 1em;
-    }}
+    }
     '''
     stylesheet_css = epub.EpubItem(
         uid="stylesheet",
@@ -133,12 +102,6 @@ def add_chapters_to_epub(book: epub.EpubBook, html_files: List[str],
         # Read and clean HTML
         with codecs.open(file_path, 'r', encoding='utf-8') as f:
             html_raw = ''.join(s for s in f.read() if s.isprintable() or s in '\n\t')
-
-        # Fix font URL
-        html_raw = html_raw.replace(
-            'https://fonts.googleapis.com/css?family=Playwrite IT Moderna',
-            'https://fonts.googleapis.com/css?family=Playwrite+IT+Moderna'
-        )
 
         html_soup = BeautifulSoup(html_raw, 'html.parser')
         chapter_title = html_soup.find('h1').text
