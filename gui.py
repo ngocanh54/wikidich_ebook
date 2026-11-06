@@ -335,6 +335,8 @@ class WikidichEbookGUI(QMainWindow):
         self.start_chapter_spin.setMinimum(0)
         self.start_chapter_spin.setMaximum(9999)
         self.start_chapter_spin.setValue(0)
+        # Native arrows render as a broken box under the custom stylesheet; typing and the wheel still work
+        self.start_chapter_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.start_chapter_spin.setToolTip("Chapter number to start from (0 = from beginning)")
 
         self.volume_combo = QComboBox()
