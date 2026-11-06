@@ -53,6 +53,15 @@ class FakeResponse:
         self.content = text.encode("utf-8")
         self.status_code = status
         self.headers = {}
+        self.url = ""
+
+    def close(self):
+        pass
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import requests
+            raise requests.HTTPError(f"HTTP {self.status_code}")
 
 
 class StubPage:
@@ -176,6 +185,49 @@ def metadata_parses():
     assert info.output_folder == "truyen-thu-nghiem", info.output_folder
     assert info.url_pattern == "https://truyenwikidich.net/truyen/truyen-thu-nghiem/", info.url_pattern
     assert info.image_url == "https://truyenwikidich.net/files/cover.jpg", info.image_url
+
+
+@check
+def link_errors_are_friendly():
+    import requests
+    from wikidich_ebook import BookLinkError
+    from wikidich_ebook.scraper import get_url_content
+    with mock.patch("requests.get", side_effect=requests.ConnectionError("reset")):
+        try:
+            get_url_content("https://old.example/truyen/x")
+        except BookLinkError as e:
+            assert "copy the link" in str(e), e
+        else:
+            raise AssertionError("connection error not turned into BookLinkError")
+    resp = FakeResponse("nope", status=404)
+    with mock.patch("requests.get", return_value=resp):
+        try:
+            get_url_content("https://new.example/truyen/x")
+        except BookLinkError as e:
+            assert "404" in str(e), e
+        else:
+            raise AssertionError("404 not turned into BookLinkError")
+
+
+@check
+def redirect_host_is_followed():
+    from wikidich_ebook import check_if_updated
+    from wikidich_ebook.scraper import resolve_book_url
+    resp = FakeResponse(read_fixture("toc_volumes.html"))
+    resp.url = "https://moved.example/truyen/truyen-thu-nghiem-abc123"
+    with mock.patch("requests.get", return_value=resp):
+        assert resolve_book_url("https://old.example/truyen/truyen-thu-nghiem-abc123") == resp.url
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = os.getcwd(); os.chdir(tmp)
+            try:
+                check_if_updated("https://old.example/truyen/truyen-thu-nghiem-abc123")
+                import json
+                with open(os.path.join("truyen-thu-nghiem", "info.json"), encoding="utf-8") as f:
+                    info = json.load(f)
+            finally:
+                os.chdir(cwd)
+    assert info["main_page_url"] == "https://moved.example", info["main_page_url"]
+    assert info["url_pattern"].startswith("https://moved.example/"), info["url_pattern"]
 
 
 @check
@@ -335,7 +387,8 @@ def run_get_toc(page, folder="book"):
 
     os.makedirs(folder, exist_ok=True)
     with mock.patch.object(workflow, "sync_playwright", lambda: _Ctx()), \
-         mock.patch.object(workflow, "_ensure_playwright_browser", lambda: None):
+         mock.patch.object(workflow, "_ensure_playwright_browser", lambda: None), \
+         mock.patch.object(workflow, "resolve_book_url", lambda u: u):
         workflow.get_toc(VOLUME_URL, folder)
     return folder
 

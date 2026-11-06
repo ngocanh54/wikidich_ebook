@@ -9,7 +9,7 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 **Supported Domains:**
 - `truyenwikidich.net` (original)
 - `wikicv.net` (new domain with same structure)
-- `wikicv.org` (both old domains redirect here in a browser; chapter-list loads are limited per IP, and the quota notice raises `TocQuotaError`)
+- `wikicv.org` (current; the site has moved twice, so the app does not hard-code a host: it uses the host of the link the user pastes and follows redirects via `resolve_book_url()`; a dead or moved link raises `BookLinkError` telling the user to copy the current link from their browser. Chapter-list loads are limited per IP, and the quota notice raises `TocQuotaError`. Slugs carry an id suffix.)
 
 **Version:** 2.2.0
 

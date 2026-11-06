@@ -3,31 +3,69 @@ Web scraping functions for wikidich ebook creator.
 """
 import logging
 import requests
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 from .config import REQUEST_HEADERS, REQUEST_TIMEOUT
 
 
-def get_url_content(url: str) -> BeautifulSoup:
+class BookLinkError(RuntimeError):
+    """The book link could not be opened (site moved, link changed, or no connection)."""
+
+
+_LINK_HINT = ("The site may have moved or the link may have changed. "
+              "Open the book in your browser and copy the link from the address bar.")
+
+
+def _fetch_book_page(url: str):
+    """GET a book page, following redirects, and turn failures into BookLinkError."""
+    try:
+        response = requests.get(url, headers=REQUEST_HEADERS, stream=True, timeout=REQUEST_TIMEOUT)
+    except (requests.ConnectionError, requests.Timeout) as e:
+        logging.error(f"Failed to fetch {url}: {e}")
+        raise BookLinkError(f"Could not connect to {urlparse(url).netloc}. {_LINK_HINT}") from e
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch {url}: {e}")
+        raise
+    if response.status_code in (404, 410):
+        response.close()
+        raise BookLinkError(f"The book page was not found (HTTP {response.status_code}). {_LINK_HINT}")
+    try:
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch {url}: {e}")
+        raise
+    return response
+
+
+def resolve_book_url(url: str) -> str:
+    """Return the URL the book page finally lives at after redirects (e.g. after a site move)."""
+    response = _fetch_book_page(url)
+    final_url = response.url
+    response.close()
+    if urlparse(final_url).netloc != urlparse(url).netloc:
+        print(f"Link redirected to {final_url}")
+    return final_url
+
+
+def get_url_content(url: str, return_url: bool = False):
     """
     Fetch and parse HTML content from a URL.
 
     Args:
         url: The URL to fetch
+        return_url: Also return the final URL after redirects
 
     Returns:
-        BeautifulSoup object with parsed HTML
+        BeautifulSoup object with parsed HTML, or (soup, final_url) if return_url
 
     Raises:
-        requests.RequestException: If the request fails
+        BookLinkError: If the page is missing or the site cannot be reached
+        requests.RequestException: For other request failures
     """
-    try:
-        response = requests.get(url, headers=REQUEST_HEADERS, stream=True, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return BeautifulSoup(response.content, 'html.parser')
-    except requests.RequestException as e:
-        logging.error(f"Failed to fetch {url}: {e}")
-        raise
+    response = _fetch_book_page(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    return (soup, response.url) if return_url else soup
 
 
 def download_chapter_content(chapter_url: str) -> str:

@@ -430,11 +430,13 @@ class WikidichEbookGUI(QMainWindow):
             QMessageBox.warning(self, "Invalid URL", "URL must start with http:// or https://")
             return False
 
-        if not any(host in url for host in ("truyenwikidich.net", "wikicv.net", "wikicv.org")):
+        if "/truyen/" not in url:
             reply = QMessageBox.question(
                 self,
                 "Confirm URL",
-                "This doesn't look like a truyenwikidich.net, wikicv.net or wikicv.org URL.\nContinue anyway?",
+                "This doesn't look like a book page (no /truyen/ in the link).\n"
+                "Copy the link from your browser's address bar while viewing the book.\n\n"
+                "Continue anyway?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.No:
@@ -621,7 +623,7 @@ class WikidichEbookGUI(QMainWindow):
         about_text = f"""
         <h2>Wikidich Ebook Creator</h2>
         <p><b>Version:</b> {__version__}</p>
-        <p>Download Vietnamese web novels from truyenwikidich.net<br>
+        <p>Download Vietnamese web novels from wikicv.org and similar sites<br>
         and convert them into offline EPUB ebooks.</p>
         <p><b>Features:</b></p>
         <ul>

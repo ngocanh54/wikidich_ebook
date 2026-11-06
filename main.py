@@ -16,7 +16,7 @@ from wikidich_ebook import (
 def main():
     """Main CLI function."""
     parser = argparse.ArgumentParser(
-        description='Download Vietnamese web novels from truyenwikidich.net and create EPUB ebooks'
+        description='Download Vietnamese web novels from wikicv.org (and compatible sites) and create EPUB ebooks'
     )
 
     parser.add_argument(

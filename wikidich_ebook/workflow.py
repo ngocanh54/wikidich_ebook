@@ -39,7 +39,7 @@ import pandas as pd
 from ebooklib import epub
 
 from .models import BookInfo, Chapter
-from .scraper import get_url_content
+from .scraper import get_url_content, resolve_book_url
 from .parser import parse_book_metadata, extract_chapters_from_page
 from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import (
@@ -63,7 +63,7 @@ def check_if_updated(url_toc: str) -> Tuple[bool, str]:
     print(f"Checking: {url_toc}")
 
     # Fetch and parse metadata
-    soup = get_url_content(url_toc)
+    soup, url_toc = get_url_content(url_toc, return_url=True)  # follow site moves/redirects
     book_info = parse_book_metadata(soup, url_toc)
 
     # Create output folder
@@ -112,6 +112,7 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
         page_list: List of page numbers (for manual pagination)
         is_manual: Whether pagination is manually specified
     """
+    url_toc = resolve_book_url(url_toc)  # same host the metadata step used
     print(f"Getting TOC: {url_toc}")
     main_page_url, url_pattern = extract_url_components(url_toc)
 
