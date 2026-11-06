@@ -59,6 +59,12 @@ assert w.validate_inputs() is True           # no URL typed, still valid
 w.current_folder = tempfile.mkdtemp(); w.refresh_books()
 QMessageBox.warning = staticmethod(lambda *a, **k: None)
 assert w.validate_inputs() is False          # empty location: nothing to build
+# Download Chapters Only uses the same picker, without the partial-download prompt
+w.current_folder = bookroot
+w.operation_combo.setCurrentText("Download Chapters Only"); app.processEvents()
+assert not w.url_input.isEnabled() and w.book_combo.isVisible() and w.book_combo.currentData() == bdir
+QMessageBox.question = staticmethod(lambda *a, **k: (_ for _ in ()).throw(AssertionError("asked")))
+assert w.validate_inputs() is True
 w.operation_combo.setCurrentText("Full Workflow"); app.processEvents()
 assert w.url_input.isEnabled() and not w.book_combo.isVisible()
 

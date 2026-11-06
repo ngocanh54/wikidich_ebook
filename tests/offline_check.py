@@ -321,6 +321,31 @@ def epub_only_from_book_folder_without_url():
 
 
 @check
+def download_only_from_book_folder_without_url():
+    """Download Chapters Only: resume a book whose TOC is already extracted, with no URL."""
+    from wikidich_ebook import download_truyen
+    from wikidich_ebook import downloader, scraper
+    info, chapters = build_book("toc_volumes.html", VOLUME_URL)
+    book_dir = os.path.abspath(info.output_folder)
+    missing = [c.chapter_number for c in chapters[2:]]
+    for n in missing:
+        os.remove(os.path.join(book_dir, f"chap_{n:04d}.html"))
+    os.chdir(tempfile.mkdtemp())  # info.json holds a relative folder name; it must not matter
+    chapter_page = read_fixture("chapter_page.html")
+    asked = []
+    def fake_get(url, *a, **k):
+        asked.append(url)
+        return FakeResponse(chapter_page)
+    with mock.patch.object(scraper.requests, "get", fake_get), \
+         mock.patch.object(downloader.time, "sleep", lambda s: None):
+        fails = download_truyen(book_dir, 0)
+    assert not fails, f"{fails} failures"
+    assert len(asked) == len(missing), f"{len(asked)} requests for {len(missing)} missing chapters"
+    for n in missing:
+        assert os.path.exists(os.path.join(book_dir, f"chap_{n:04d}.html")), f"chapter {n} not downloaded"
+
+
+@check
 def epub_auto_detects_volumes():
     # use_volume_structure=None must detect the two volumes from toc.csv
     info = build_book("toc_volumes.html", VOLUME_URL)[0]

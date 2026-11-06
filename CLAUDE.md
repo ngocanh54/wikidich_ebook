@@ -47,6 +47,8 @@ python3 main.py "URL" --toc-only
 
 # CLI - Download chapters only (no EPUB creation)
 python3 main.py "URL" --download-only
+# Or without any URL, for a book whose TOC is already extracted
+python3 main.py --download-only --book-folder path/to/book-folder
 
 # CLI - Create EPUB from already downloaded chapters
 python3 main.py "URL" --epub-only

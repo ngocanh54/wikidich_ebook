@@ -23,12 +23,12 @@ def main():
     parser.add_argument(
         'url',
         nargs='?',
-        help='URL of the book\'s table of contents page (not needed with --epub-only --book-folder)'
+        help='URL of the book\'s table of contents page (not needed with --epub-only/--download-only with --book-folder)'
     )
 
     parser.add_argument(
         '--book-folder',
-        help='With --epub-only: build the EPUB from this already-downloaded book folder (no URL needed)'
+        help='With --epub-only or --download-only: work on this existing book folder (needs toc.csv); no URL needed'
     )
 
     parser.add_argument(
@@ -77,10 +77,10 @@ def main():
 
     args = parser.parse_args()
 
-    if args.book_folder and not args.epub_only:
-        parser.error('--book-folder only works together with --epub-only')
-    if not args.url and not (args.epub_only and args.book_folder):
-        parser.error('a book URL is required (or use --epub-only --book-folder PATH)')
+    if args.book_folder and not (args.epub_only or args.download_only):
+        parser.error('--book-folder only works together with --epub-only or --download-only')
+    if not args.url and not (args.book_folder and (args.epub_only or args.download_only)):
+        parser.error('a book URL is required (or use --epub-only/--download-only with --book-folder PATH)')
 
     # Parse volume structure option
     volume_structure = None
@@ -118,8 +118,11 @@ def main():
             print("\n✓ TOC extracted successfully!")
 
         elif args.download_only:
-            # Only download chapters
-            is_updated, folder = check_if_updated(args.url)
+            # Only download chapters; a book folder with toc.csv needs no URL
+            if args.book_folder:
+                folder = os.path.abspath(args.book_folder)
+            else:
+                is_updated, folder = check_if_updated(args.url)
             download_truyen(folder, args.start_chapter)
             print("\n✓ Chapters downloaded successfully!")
 

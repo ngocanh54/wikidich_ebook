@@ -225,6 +225,8 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
     print(json.dumps(info_dict, indent=2, ensure_ascii=False))
 
     book_info = BookInfo.from_dict(info_dict)
+    # info.json stores a relative folder name; always use the folder we were given
+    book_info.output_folder = input_dir
 
     # Load TOC from CSV
     toc_df = pd.read_csv(os.path.join(book_info.output_folder, 'toc.csv'))
