@@ -55,6 +55,7 @@ This tool includes automatic delays (2-7 seconds) between chapter downloads to:
    - Copy the novel's URL from truyenwikidich.net
    - Paste it into the app
    - Click "Download & Create EPUB"
+   - Downloaded a long book over several sessions? Choose "Create EPUB Only", pick the save location, and select the book from the list. No URL needed.
    - Wait for it to finish
    - Find your EPUB file in the folder you chose!
 
@@ -155,6 +156,8 @@ python3 main.py "https://wikicv.net/truyen/your-novel-url" --download-only
 **Create EPUB from already downloaded chapters:**
 ```bash
 python3 main.py "https://wikicv.net/truyen/your-novel-url" --epub-only
+# No URL needed: point at the downloaded book folder
+python3 main.py --epub-only --book-folder path/to/book-folder
 ```
 
 **Force volume/flat structure:**

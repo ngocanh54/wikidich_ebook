@@ -289,6 +289,36 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
     return num_fail
 
 
+def find_book_folders(location: str) -> list:
+    """
+    List downloaded books under `location` (or `location` itself if it is a book folder).
+
+    A book folder has info.json and toc.csv. Returns dicts with path, title,
+    downloaded (chapter files on disk) and total (chapters in toc.csv), sorted by title.
+    """
+    candidates = [location]
+    try:
+        candidates += [os.path.join(location, d) for d in sorted(os.listdir(location))]
+    except OSError:
+        return []
+    books = []
+    for path in candidates:
+        info_file = os.path.join(path, "info.json")
+        toc_file = os.path.join(path, "toc.csv")
+        if not (os.path.isfile(info_file) and os.path.isfile(toc_file)):
+            continue
+        try:
+            with open(info_file, 'r', encoding='utf-8') as f:
+                title = json.load(f).get('title') or os.path.basename(path)
+            with open(toc_file, 'r', encoding='utf-8') as f:
+                total = max(sum(1 for _ in f) - 1, 0)
+            downloaded = sum(1 for n in os.listdir(path) if n.startswith('chap_') and n.endswith('.html'))
+        except (OSError, ValueError):
+            continue
+        books.append({'path': path, 'title': title, 'downloaded': downloaded, 'total': total})
+    return sorted(books, key=lambda b: b['title'].lower())
+
+
 def make_ebook(input_dir: str, latest_chapter_read: int = 0,
                use_volume_structure: Optional[bool] = None) -> None:
     """
@@ -306,6 +336,8 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
         info_dict = json.load(f)
 
     book_info = BookInfo.from_dict(info_dict)
+    # info.json stores a relative folder name; always read chapters from the folder we were given
+    book_info.output_folder = input_dir
 
     # Load TOC
     toc_df = pd.read_csv(os.path.join(input_dir, 'toc.csv'))

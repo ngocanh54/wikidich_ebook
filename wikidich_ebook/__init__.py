@@ -11,7 +11,8 @@ from .workflow import (
     check_if_updated,
     get_toc,
     download_truyen,
-    make_ebook
+    make_ebook,
+    find_book_folders
 )
 
 # Import models
@@ -30,6 +31,7 @@ __all__ = [
     'get_toc',
     'download_truyen',
     'make_ebook',
+    'find_book_folders',
 
     # Models
     'BookInfo',

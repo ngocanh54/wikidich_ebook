@@ -50,6 +50,8 @@ python3 main.py "URL" --download-only
 
 # CLI - Create EPUB from already downloaded chapters
 python3 main.py "URL" --epub-only
+# Or without any URL (no network): point at the downloaded book folder
+python3 main.py --epub-only --book-folder path/to/book-folder
 
 # CLI - Force volume/flat structure in EPUB TOC
 python3 main.py "URL" --volume-structure yes   # or: no, auto (default)

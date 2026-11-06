@@ -3,6 +3,7 @@
 Main CLI entry point for Wikidich Ebook Creator.
 """
 import argparse
+import os
 import sys
 from wikidich_ebook import (
     download_n_make_ebook_wikidich,
@@ -21,7 +22,13 @@ def main():
 
     parser.add_argument(
         'url',
-        help='URL of the book\'s table of contents page'
+        nargs='?',
+        help='URL of the book\'s table of contents page (not needed with --epub-only --book-folder)'
+    )
+
+    parser.add_argument(
+        '--book-folder',
+        help='With --epub-only: build the EPUB from this already-downloaded book folder (no URL needed)'
     )
 
     parser.add_argument(
@@ -70,6 +77,11 @@ def main():
 
     args = parser.parse_args()
 
+    if args.book_folder and not args.epub_only:
+        parser.error('--book-folder only works together with --epub-only')
+    if not args.url and not (args.epub_only and args.book_folder):
+        parser.error('a book URL is required (or use --epub-only --book-folder PATH)')
+
     # Parse volume structure option
     volume_structure = None
     if args.volume_structure == 'yes':
@@ -112,8 +124,12 @@ def main():
             print("\n✓ Chapters downloaded successfully!")
 
         elif args.epub_only:
-            # Only create EPUB
-            is_updated, folder = check_if_updated(args.url)
+            # Only create EPUB; a book folder needs no URL and no network
+            if args.book_folder:
+                folder = os.path.abspath(args.book_folder)
+                os.chdir(os.path.dirname(folder))  # EPUB is written next to the book folder
+            else:
+                is_updated, folder = check_if_updated(args.url)
             make_ebook(folder, args.start_chapter, volume_structure)
             print("\n✓ EPUB created successfully!")
 

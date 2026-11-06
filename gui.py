@@ -23,6 +23,7 @@ from wikidich_ebook import (
     get_toc,
     download_truyen,
     make_ebook,
+    find_book_folders,
     __version__
 )
 from wikidich_ebook.updater import check_for_updates
@@ -52,8 +53,9 @@ class WorkerThread(QThread):
     progress_signal = pyqtSignal(int, int)  # (current, total) for chapter downloads
 
     def __init__(self, url, output_folder, operation_mode='full', start_chapter=0,
-                 volume_structure='auto', manual_pages=None):
+                 volume_structure='auto', manual_pages=None, book_folder=None):
         super().__init__()
+        self.book_folder = book_folder  # Create EPUB Only: already-downloaded book, no URL needed
         self.url = url
         self.output_folder = output_folder
         self.operation_mode = operation_mode
@@ -163,9 +165,10 @@ class WorkerThread(QThread):
                 self.log_signal.emit("Operation: Create EPUB\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
-                is_updated, folder = check_if_updated(self.url)
+                if not self.book_folder:
+                    raise ValueError("Choose a downloaded book first.")
 
-                make_ebook(folder, self.start_chapter, volume_structure_value)
+                make_ebook(self.book_folder, self.start_chapter, volume_structure_value)
 
                 self.log_signal.emit("\n✓ EPUB created successfully!\n")
                 self.finished_signal.emit(True, "EPUB created successfully!")
@@ -281,6 +284,14 @@ class WikidichEbookGUI(QMainWindow):
         folder_layout.addWidget(browse_btn)
         main_layout.addLayout(folder_layout)
 
+        # Book picker (only for Create EPUB Only: no URL needed, pick a downloaded book)
+        self.book_label = self._field_label("Downloaded book (in the save location)")
+        self.book_combo = QComboBox()
+        self.book_label.hide()
+        self.book_combo.hide()
+        main_layout.addWidget(self.book_label)
+        main_layout.addWidget(self.book_combo)
+
         # Options card
         card = QFrame()
         card.setObjectName("card")
@@ -298,6 +309,7 @@ class WikidichEbookGUI(QMainWindow):
             "Create EPUB Only"
         ])
         self.operation_combo.currentTextChanged.connect(self.update_action_button_text)
+        self.operation_combo.currentTextChanged.connect(self.update_mode_ui)
 
         self.start_chapter_spin = QSpinBox()
         self.start_chapter_spin.setMinimum(0)
@@ -406,6 +418,38 @@ class WikidichEbookGUI(QMainWindow):
         if folder:
             self.current_folder = folder
             self.folder_display.setText(folder)
+            self.refresh_books()
+
+    def is_epub_only(self):
+        return self.operation_combo.currentText() == "Create EPUB Only"
+
+    def update_mode_ui(self, _text=None):
+        """Create EPUB Only works from a downloaded book folder, so it swaps the URL for a book picker."""
+        epub_only = self.is_epub_only()
+        self.url_input.setEnabled(not epub_only)
+        self.url_input.setPlaceholderText(
+            "Not needed for Create EPUB Only: pick a downloaded book below"
+            if epub_only else "https://wikicv.org/truyen/..."
+        )
+        self.book_label.setVisible(epub_only)
+        self.book_combo.setVisible(epub_only)
+        self.manual_pages_input.setEnabled(not epub_only)
+        if epub_only:
+            self.refresh_books()
+
+    def refresh_books(self):
+        """List the downloaded books found in the save location."""
+        self.book_combo.clear()
+        books = find_book_folders(self.current_folder)
+        for b in books:
+            self.book_combo.addItem(
+                f"{b['title']}  ({b['downloaded']}/{b['total']} chapters downloaded)", b['path']
+            )
+            self.book_combo.setItemData(self.book_combo.count() - 1, (b['downloaded'], b['total']),
+                                        Qt.ItemDataRole.UserRole + 1)
+        if not books:
+            self.book_combo.addItem("No downloaded books found in this folder")
+            self.book_combo.setItemData(0, None)
 
     def update_action_button_text(self, operation_text):
         """Update action button text based on selected operation."""
@@ -420,6 +464,25 @@ class WikidichEbookGUI(QMainWindow):
 
     def validate_inputs(self):
         """Validate user inputs."""
+        if self.is_epub_only():
+            if not self.book_combo.currentData():
+                QMessageBox.warning(
+                    self, "No book selected",
+                    "No downloaded book found in the save location.\n"
+                    "Pick the folder that contains your downloaded books (or the book folder itself)."
+                )
+                return False
+            counts = self.book_combo.currentData(Qt.ItemDataRole.UserRole + 1)
+            if counts and counts[0] < counts[1]:
+                reply = QMessageBox.question(
+                    self, "Book not fully downloaded",
+                    f"Only {counts[0]} of {counts[1]} chapters are downloaded.\n"
+                    "Create the EPUB from the chapters you have?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                return reply == QMessageBox.StandardButton.Yes
+            return True
+
         url = self.url_input.text().strip()
 
         if not url:
@@ -450,6 +513,7 @@ class WikidichEbookGUI(QMainWindow):
             return
 
         url = self.url_input.text().strip()
+        book_folder = self.book_combo.currentData() if self.is_epub_only() else None
 
         # Get operation mode
         operation_map = {
@@ -498,7 +562,8 @@ class WikidichEbookGUI(QMainWindow):
             operation_mode=operation_mode,
             start_chapter=start_chapter,
             volume_structure=volume_structure,
-            manual_pages=manual_pages
+            manual_pages=manual_pages,
+            book_folder=book_folder
         )
         self.worker.log_signal.connect(self.append_log)
         self.worker.finished_signal.connect(self.download_finished)

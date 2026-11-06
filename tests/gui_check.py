@@ -40,6 +40,28 @@ ev = QCloseEvent(); w.closeEvent(ev); assert not ev.isAccepted() and not FakeWor
 QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
 ev = QCloseEvent(); w.closeEvent(ev); assert ev.isAccepted() and FakeWorker.terminated
 w.worker = None
+# Create EPUB Only: URL not needed, pick a downloaded book from the save location
+import json as _json
+bookroot = tempfile.mkdtemp()
+bdir = os.path.join(bookroot, "my-book"); os.makedirs(bdir)
+open(os.path.join(bdir, "info.json"), "w", encoding="utf-8").write(_json.dumps({"title": "My Book"}))
+open(os.path.join(bdir, "toc.csv"), "w", encoding="utf-8").write("chapter_number,chapter_name,url,volume_name\n1,a,u,\n2,b,u,\n")
+open(os.path.join(bdir, "chap_0001.html"), "w", encoding="utf-8").write("x")
+w.current_folder = bookroot
+w.operation_combo.setCurrentText("Create EPUB Only"); app.processEvents()
+assert not w.url_input.isEnabled() and w.book_combo.isVisible()
+assert w.book_combo.count() == 1 and w.book_combo.currentData() == bdir, w.book_combo.currentText()
+assert "1/2" in w.book_combo.currentText()
+QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
+assert w.validate_inputs() is False          # partially downloaded: user declines
+QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
+assert w.validate_inputs() is True           # no URL typed, still valid
+w.current_folder = tempfile.mkdtemp(); w.refresh_books()
+QMessageBox.warning = staticmethod(lambda *a, **k: None)
+assert w.validate_inputs() is False          # empty location: nothing to build
+w.operation_combo.setCurrentText("Full Workflow"); app.processEvents()
+assert w.url_input.isEnabled() and not w.book_combo.isVisible()
+
 # theme switch (offscreen ignores the system scheme, so pass it explicitly)
 w.apply_theme(True); assert w._dark is True and "#1B1626" in w.styleSheet()
 w.apply_theme(False); assert w._dark is False and "#FBF8FF" in w.styleSheet()

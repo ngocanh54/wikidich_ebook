@@ -302,6 +302,25 @@ def epub_volume_structure():
 
 
 @check
+def epub_only_from_book_folder_without_url():
+    """Create EPUB Only: pick a downloaded book from the save location; no URL, no network."""
+    from wikidich_ebook import make_ebook, find_book_folders
+    info, _ = build_book("toc_volumes.html", VOLUME_URL)
+    save_location = os.getcwd()
+    books = find_book_folders(save_location)
+    assert len(books) == 1 and books[0]["title"] == VOLUME_TITLE, books
+    assert books[0]["downloaded"] == books[0]["total"] == VOLUME_CHAPTERS, books
+    assert find_book_folders(os.path.join(save_location, "nope")) == []
+    book_dir = os.path.abspath(info.output_folder)
+    os.remove(f"{VOLUME_TITLE}.epub") if os.path.exists(f"{VOLUME_TITLE}.epub") else None
+    elsewhere = tempfile.mkdtemp()
+    os.chdir(elsewhere)  # info.json holds a relative folder name; it must not matter
+    with mock.patch("requests.get", side_effect=AssertionError("network used")):
+        make_ebook(book_dir, 0, None)
+    inspect_epub(os.path.join(elsewhere, f"{VOLUME_TITLE}.epub"), VOLUME_TITLE, VOLUME_CHAPTERS)
+
+
+@check
 def epub_auto_detects_volumes():
     # use_volume_structure=None must detect the two volumes from toc.csv
     info = build_book("toc_volumes.html", VOLUME_URL)[0]
