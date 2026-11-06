@@ -18,6 +18,7 @@ from PyQt6.QtGui import QDesktopServices, QAction
 sys.path.insert(0, str(Path(__file__).parent))
 
 from wikidich_ebook import (
+    DownloadCancelled,
     download_n_make_ebook_wikidich,
     check_if_updated,
     get_toc,
@@ -66,6 +67,14 @@ class WorkerThread(QThread):
         self.start_chapter = start_chapter
         self.volume_structure = volume_structure
         self.manual_pages = manual_pages
+        self._stop_requested = False
+
+    def request_stop(self):
+        """Ask the download to stop after the current chapter (saved chapters are kept)."""
+        self._stop_requested = True
+
+    def should_stop(self):
+        return self._stop_requested
 
     def progress_callback(self, current, total):
         """Callback for chapter download progress."""
@@ -155,7 +164,8 @@ class WorkerThread(QThread):
                     raise ValueError("Choose a book first (its TOC must already be extracted).")
 
                 # Pass progress callback for GUI progress bar
-                num_fail = download_truyen(self.book_folder, self.start_chapter, self.progress_callback)
+                num_fail = download_truyen(self.book_folder, self.start_chapter, self.progress_callback,
+                                          self.should_stop)
 
                 if num_fail and num_fail > 0:
                     self.log_signal.emit(f"\n⚠️ Partial download: {num_fail} chapter(s) could not be downloaded due to IP restriction.\n")
@@ -189,13 +199,18 @@ class WorkerThread(QThread):
                     url_toc=self.url,
                     latest_chapter_read=self.start_chapter,
                     use_volume_structure=volume_structure_value,
-                    progress_callback=self.progress_callback
+                    progress_callback=self.progress_callback,
+                    should_stop=self.should_stop
                 )
 
                 self.log_signal.emit("\n" + "="*60 + "\n")
                 self.log_signal.emit("✓ SUCCESS! EPUB created successfully!\n")
                 self.log_signal.emit("="*60 + "\n\n")
                 self.finished_signal.emit(True, "EPUB created successfully!")
+
+        except DownloadCancelled:
+            self.log_signal.emit("\n⏹️ Stopped. Chapters downloaded so far are kept; run it again to resume.\n")
+            self.finished_signal.emit(True, "Stopped by user")
 
         except Exception as e:
             error_msg = f"Error: {str(e)}"
@@ -349,7 +364,17 @@ class WikidichEbookGUI(QMainWindow):
         self.download_btn.setObjectName("primary")
         self.download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.download_btn.clicked.connect(self.start_download)
-        main_layout.addWidget(self.download_btn)
+        self.stop_btn = QPushButton("⏹ Stop")
+        self.stop_btn.setObjectName("stop")
+        self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.stop_btn.setToolTip("Stop after the current chapter; chapters already downloaded are kept")
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.clicked.connect(self.stop_download)
+        action_row = QHBoxLayout()
+        action_row.setSpacing(10)
+        action_row.addWidget(self.download_btn, 1)
+        action_row.addWidget(self.stop_btn)
+        main_layout.addLayout(action_row)
 
         # Progress bar
         self.progress = QProgressBar()
@@ -363,6 +388,15 @@ class WikidichEbookGUI(QMainWindow):
         self.log_text.setReadOnly(True)
         self.log_text.setPlaceholderText("Logs will appear here...")
         main_layout.addWidget(self.log_text, 1)
+
+        self.clear_log_btn = QPushButton("Clear log")
+        self.clear_log_btn.setObjectName("secondary")
+        self.clear_log_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clear_log_btn.clicked.connect(self.log_text.clear)
+        log_row = QHBoxLayout()
+        log_row.addStretch(1)
+        log_row.addWidget(self.clear_log_btn)
+        main_layout.addLayout(log_row)
 
         # Status bar
         self.status_label = QLabel("Ready")
@@ -550,8 +584,9 @@ class WikidichEbookGUI(QMainWindow):
         # Get manual pages
         manual_pages = self.manual_pages_input.text().strip() or None
 
-        # Disable button
+        # Disable start, enable stop
         self.download_btn.setEnabled(False)
+        self.stop_btn.setEnabled(True)
         self.banner.hide()
 
         # Set progress bar to indeterminate mode (animated) during execution
@@ -575,6 +610,14 @@ class WikidichEbookGUI(QMainWindow):
         self.worker.status_signal.connect(self.update_status)
         self.worker.progress_signal.connect(self.update_progress)
         self.worker.start()
+
+    def stop_download(self):
+        """Ask the worker to stop after the current chapter."""
+        if self.worker and self.worker.isRunning():
+            self.worker.request_stop()
+            self.stop_btn.setEnabled(False)
+            self.update_status("Stopping after the current chapter...")
+            self.append_log("\n⏹️ Stop requested, finishing the current chapter...\n")
 
     def append_log(self, text):
         """Append text to log (thread-safe)."""
@@ -603,6 +646,12 @@ class WikidichEbookGUI(QMainWindow):
     def download_finished(self, success, message):
         """Handle download completion."""
         self.download_btn.setEnabled(True)
+        self.stop_btn.setEnabled(False)
+
+        if success and message == "Stopped by user":
+            # Keep the progress bar where it stopped; no popup, the log says what happened
+            self.worker = None
+            return
 
         is_partial = success and message.startswith("Partial download")
         if is_partial:

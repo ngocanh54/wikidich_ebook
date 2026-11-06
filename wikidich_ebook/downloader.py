@@ -41,9 +41,24 @@ def create_chapter_html(title: str, author: str, chapter_title: str,
     </html>'''
 
 
+class DownloadCancelled(Exception):
+    """The user asked to stop; chapters saved so far are kept."""
+
+
+def _sleep_unless_stopped(seconds, should_stop):
+    """Sleep `seconds`, waking early (and returning True) when should_stop() turns true."""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if should_stop and should_stop():
+            return True
+        time.sleep(min(0.2, max(0.0, end - time.monotonic())))
+    return bool(should_stop and should_stop())
+
+
 def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
                       author: str, url_pattern: str, output_folder: str,
-                      latest_chapter_read: int = 0, progress_callback=None) -> int:
+                      latest_chapter_read: int = 0, progress_callback=None,
+                      should_stop=None) -> int:
     """
     Download all chapters from the list.
 
@@ -56,6 +71,8 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
         output_folder: Folder to save chapters
         latest_chapter_read: Start from this chapter number
         progress_callback: Optional callback function(current, total) for progress updates
+        should_stop: Optional callable; when it returns True the download stops after the
+            current chapter and DownloadCancelled is raised (saved chapters are kept)
 
     Returns:
         Number of failed downloads
@@ -83,6 +100,11 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
     print(f"\n📥 Downloading {total_chapters} chapters...\n")
 
     for idx, chapter in enumerate(chapters_to_download, 1):
+        if should_stop and should_stop():
+            print("\n⏹️  Stopped by user. Chapters downloaded so far are kept.")
+            logging.info("Stopped by user")
+            raise DownloadCancelled()
+
         # Update progress callback
         if progress_callback:
             progress_callback(idx, total_chapters)
@@ -113,9 +135,14 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
                 f.write(html_output)
 
             # Random delay to avoid rate limiting
-            time.sleep(random.randint(MIN_DELAY, MAX_DELAY))
+            if _sleep_unless_stopped(random.randint(MIN_DELAY, MAX_DELAY), should_stop):
+                print("\n⏹️  Stopped by user. Chapters downloaded so far are kept.")
+                logging.info("Stopped by user")
+                raise DownloadCancelled()
             consecutive_fails = 0
 
+        except DownloadCancelled:
+            raise
         except Exception as e:
             print(f'[{idx}/{total_chapters}] ❌ Failed chapter {chapter.chapter_number}: {e}')
             logging.error(f'Failed to download chapter {chapter.chapter_number}: {e}')

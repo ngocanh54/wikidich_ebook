@@ -41,7 +41,7 @@ from ebooklib import epub
 from .models import BookInfo, Chapter
 from .scraper import get_url_content, resolve_book_url
 from .parser import parse_book_metadata, extract_chapters_from_page
-from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
+from .downloader import DownloadCancelled, download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import (
     determine_output_title, create_epub_book,
     add_chapters_to_epub
@@ -208,7 +208,8 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
     print(f"TOC saved to {csv_path}")
 
 
-def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callback=None) -> None:
+def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callback=None,
+                    should_stop=None) -> None:
     """
     Download all chapters of a book.
 
@@ -216,6 +217,7 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         input_dir: Directory containing book info
         latest_chapter_read: Start from this chapter number
         progress_callback: Optional callback function(current, total) for progress updates
+        should_stop: Optional callable; True stops the download (raises DownloadCancelled)
     """
     # Load book info
     info_file = os.path.join(input_dir, "info.json")
@@ -271,7 +273,7 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         num_fail = download_chapters(
             chapters, chapter_prefix, book_info.title, book_info.author,
             book_info.url_pattern, book_info.output_folder, latest_chapter_read,
-            progress_callback
+            progress_callback, should_stop
         )
 
     if num_fail > 0:
@@ -464,7 +466,7 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
 
 def download_n_make_ebook_wikidich(url_toc: str, latest_chapter_read: int = 0,
                                    use_volume_structure: Optional[bool] = None,
-                                   progress_callback=None) -> None:
+                                   progress_callback=None, should_stop=None) -> None:
     """
     Complete workflow: check updates, get TOC, download chapters, and create EPUB.
 
@@ -483,13 +485,15 @@ def download_n_make_ebook_wikidich(url_toc: str, latest_chapter_read: int = 0,
         get_toc(url_toc, folder)
 
         # Download chapters
-        download_truyen(folder, latest_chapter_read, progress_callback)
+        download_truyen(folder, latest_chapter_read, progress_callback, should_stop)
 
         # Create EPUB
         make_ebook(folder, latest_chapter_read, use_volume_structure)
 
         print("\n✓ Complete! Your EPUB is ready.")
 
+    except DownloadCancelled:
+        raise
     except Exception as e:
         logging.error(f"Error in workflow: {e}")
         raise
