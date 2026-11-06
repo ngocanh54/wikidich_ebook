@@ -68,6 +68,21 @@ assert w.validate_inputs() is True
 w.operation_combo.setCurrentText("Full Workflow"); app.processEvents()
 assert w.url_input.isEnabled() and not w.book_combo.isVisible()
 
+# Stop and Clear log
+assert not w.stop_btn.isEnabled()
+class StopWorker:
+    stopped = False
+    def isRunning(self): return True
+    def request_stop(self): StopWorker.stopped = True
+w.worker = StopWorker(); w.stop_btn.setEnabled(True)
+w.stop_btn.click()
+assert StopWorker.stopped and not w.stop_btn.isEnabled()
+w.download_btn.setEnabled(False)
+w.download_finished(True, "Stopped by user")
+assert w.download_btn.isEnabled() and not w.stop_btn.isEnabled() and w.worker is None
+w.append_log("something"); assert w.log_text.toPlainText().strip()
+w.clear_log_btn.click(); assert w.log_text.toPlainText() == ""
+
 # theme switch (offscreen ignores the system scheme, so pass it explicitly)
 w.apply_theme(True); assert w._dark is True and "#1B1626" in w.styleSheet()
 w.apply_theme(False); assert w._dark is False and "#FBF8FF" in w.styleSheet()

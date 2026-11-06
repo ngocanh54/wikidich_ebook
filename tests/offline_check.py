@@ -224,6 +224,39 @@ def redirect_host_is_followed():
 
 
 @check
+def download_can_be_stopped():
+    from wikidich_ebook import DownloadCancelled, Chapter
+    from wikidich_ebook import downloader
+    chapters = [Chapter(chapter_number=i, chapter_name=f"c{i}", url=f"/truyen/x/{i}") for i in range(1, 6)]
+    calls = []
+
+    def fake_content(url):
+        calls.append(url)
+        return "<p>hello</p>"
+
+    stop = {"now": False}
+
+    def should_stop():
+        return stop["now"]
+
+    def fake_sleep(sec, stopper):
+        stop["now"] = True          # user presses Stop during the pause after chapter 1
+        return stopper()
+
+    with mock.patch.object(downloader, "download_chapter_content", fake_content), \
+            mock.patch.object(downloader, "_sleep_unless_stopped", fake_sleep):
+        try:
+            downloader.download_chapters(chapters, "chap", "T", "A", "https://h/truyen/x/", ".", 0,
+                                         should_stop=should_stop)
+        except DownloadCancelled:
+            pass
+        else:
+            raise AssertionError("DownloadCancelled not raised")
+    assert len(calls) == 1, calls
+    assert os.path.exists("chap_0001.html") and not os.path.exists("chap_0002.html")
+
+
+@check
 def metadata_missing_field_raises():
     from bs4 import BeautifulSoup
     from wikidich_ebook.parser import parse_book_metadata

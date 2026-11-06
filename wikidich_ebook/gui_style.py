@@ -64,6 +64,11 @@ def build_stylesheet(dark: bool = False) -> str:
     }}
     QPushButton#primary:hover {{ background: {c['accent_hover']}; }}
     QPushButton#primary:disabled {{ background: {c['disabled']}; color: {c['muted']}; }}
+    QPushButton#stop {{
+        background: {c['warn_bg']}; color: {c['warn_text']}; border: none; border-radius: 22px;
+        padding: 13px 22px; font-size: 15px; font-weight: 700;
+    }}
+    QPushButton#stop:disabled {{ background: {c['disabled']}; color: {c['muted']}; }}
     QFrame#card {{ background: {c['panel']}; border: 1px solid {c['border']}; border-radius: 22px; }}
     QLabel#banner {{
         background: {c['warn_bg']}; color: {c['warn_text']}; border-radius: 16px;
