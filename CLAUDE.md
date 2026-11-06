@@ -9,15 +9,20 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 **Supported Domains:**
 - `truyenwikidich.net` (original)
 - `wikicv.net` (new domain with same structure)
+- `wikicv.org` (current; the site has moved twice, so the app does not hard-code a host: it uses the host of the link the user pastes and follows redirects via `resolve_book_url()`; a dead or moved link raises `BookLinkError` telling the user to copy the current link from their browser. Chapter-list loads are limited per IP, and the quota notice raises `TocQuotaError`. Slugs carry an id suffix.)
 
-**Version:** 2.2.0
+**Version:** 2.3.0
 
 ## Development Commands
 
 ### Setup
 ```bash
-make setup        # create .venv, install all deps, download Playwright Chromium
+make setup        # create .venv (Python 3.14, set by PY_VERSION in Makefile), install all deps, download Playwright Chromium
+make check        # offline smoke check, no network needed
+make gui-check    # offscreen GUI state check (idle/running/partial/success/error, light/dark)
 ```
+
+Supported Python: 3.12, 3.13 and 3.14 (all tested). Re-run `make setup` after changing `PY_VERSION`.
 
 > Always activate `.venv` before running commands outside make: `source .venv/bin/activate`
 
@@ -42,9 +47,13 @@ python3 main.py "URL" --toc-only
 
 # CLI - Download chapters only (no EPUB creation)
 python3 main.py "URL" --download-only
+# Or without any URL, for a book whose TOC is already extracted
+python3 main.py --download-only --book-folder path/to/book-folder
 
 # CLI - Create EPUB from already downloaded chapters
 python3 main.py "URL" --epub-only
+# Or without any URL (no network): point at the downloaded book folder
+python3 main.py --epub-only --book-folder path/to/book-folder
 
 # CLI - Force volume/flat structure in EPUB TOC
 python3 main.py "URL" --volume-structure yes   # or: no, auto (default)
@@ -91,7 +100,6 @@ The application follows a modular pipeline architecture:
    - Returns `num_fail` (int) — `0` = complete, `>0` = partial/IP-blocked
 
 4. **EPUB Creation** (`make_ebook()`)
-   - Downloads custom font (Playwrite IT Moderna)
    - Builds EPUB file with proper structure
    - Optionally organizes by volumes
    - Adds metadata, cover image, and styling
@@ -107,10 +115,10 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
 - **downloader.py**: Chapter downloading loop, retry logic, volume detection
 - **epub_builder.py**: EPUB file creation with ebooklib
 - **utils.py**: Shared utilities (URL parsing, image downloading, safe filename creation)
-- **config.py**: Constants (USER_AGENT, delays, font settings, etc.)
+- **config.py**: Constants (USER_AGENT, delays, etc.)
 - **updater.py**: Update checking for GUI app
 - **main.py**: CLI interface with argparse (top-level, outside package)
-- **gui.py**: PyQt6 GUI application (top-level, outside package)
+- **gui.py**: PyQt6 GUI application (top-level, outside package); sidebar layout, styled by `wikidich_ebook/gui_style.py` (pastel light/dark, follows system)
 
 ### Key Technical Details
 
@@ -134,7 +142,7 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
   ```
 
 **EPUB Generation:**
-- Custom font embedded: Playwrite IT Moderna
+- No embedded font: the reader's own font is used (a minimal stylesheet is still linked by every chapter)
 - Volume structure detection (looks for "Quyển" or "Tập" keywords)
 - CSS styling included for proper Vietnamese text rendering
 - Metadata preserved (title, author, language=vi)
@@ -150,6 +158,18 @@ Always maintain the delay between chapter downloads (configured in `config.py`).
 ### Playwright Browser
 Playwright manages its own Chromium bundle — no system Chrome required. After installing dependencies, run `playwright install chromium` once to download the browser. If upgrading the `playwright` package, re-run this command as browser binaries are versioned alongside the package.
 
+### Dependencies
+- `requirements.txt`: lower bounds (oldest tested). `ebooklib` and `beautifulsoup4` stay exact because they are the fragile ones.
+- `requirements-build.txt`: exact `==` pins for the combination last tested; `make setup` and releases use it, so builds are reproducible.
+- Never bump a pin without running the matrix below.
+
+**Refresh checklist (about quarterly):**
+1. For each of Python 3.12, 3.13, 3.14 run `scripts/compat_check.sh --python X.Y --with-build` (file pins), then again with `--latest`. Add `--live <TOC_URL>` when the site quota allows.
+2. If something fails, bisect with `--pin pkg==x.y.z`.
+3. Copy the versions from "Installed versions" into `requirements-build.txt`, and the tested floor into `requirements.txt`.
+4. After a Playwright bump run `rtk proxy playwright install chromium`.
+5. `make check`, then `make build` and launch the packaged app.
+
 ### Volume Structure Detection
 The code in `downloader.py:check_multiple_volumes()` looks for Vietnamese volume keywords:
 - "Quyển" (volume)
@@ -159,7 +179,7 @@ When adding volume detection logic, ensure these keywords remain recognized.
 
 ## Testing Notes
 
-There are no automated tests in this repository. When making changes:
+`make check` (`tests/offline_check.py`) runs an offline smoke suite on synthetic HTML fixtures in `tests/fixtures/`. It proves the code works with the installed dependency versions; it cannot detect that the site changed its markup (see `tests/fixtures/README.md`). Run it after every change. It does not cover the GUI or live pages. When making changes:
 - Test the full pipeline: download → EPUB creation
 - Verify with a small novel first (under 50 chapters)
 - Check EPUB validity using Calibre or similar tools

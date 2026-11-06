@@ -31,7 +31,6 @@ def create_chapter_html(title: str, author: str, chapter_title: str,
     <html>
         <head>
         <title>{title}</title>
-        <link href='https://fonts.googleapis.com/css?family=Playwrite+IT+Moderna' rel='stylesheet'>
         <meta name="author" content="{author}">
         <meta charset="utf-8">
         </head>

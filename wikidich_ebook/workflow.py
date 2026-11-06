@@ -39,15 +39,15 @@ import pandas as pd
 from ebooklib import epub
 
 from .models import BookInfo, Chapter
-from .scraper import get_url_content
+from .scraper import get_url_content, resolve_book_url
 from .parser import parse_book_metadata, extract_chapters_from_page
 from .downloader import download_chapters, check_multiple_volumes, group_chapters_by_volume
 from .epub_builder import (
-    determine_output_title, download_font, create_epub_book,
+    determine_output_title, create_epub_book,
     add_chapters_to_epub
 )
 from .utils import extract_url_components, download_image
-from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, FONT_URL, FONT_FILENAME, GDRIVE_BASE_PATH, USER_AGENT, MAX_DOWNLOAD_RETRIES
+from .config import CHAPTERS_PER_PAGE, WEBDRIVER_WAIT, GDRIVE_BASE_PATH, USER_AGENT, MAX_DOWNLOAD_RETRIES
 
 
 def check_if_updated(url_toc: str) -> Tuple[bool, str]:
@@ -63,7 +63,7 @@ def check_if_updated(url_toc: str) -> Tuple[bool, str]:
     print(f"Checking: {url_toc}")
 
     # Fetch and parse metadata
-    soup = get_url_content(url_toc)
+    soup, url_toc = get_url_content(url_toc, return_url=True)  # follow site moves/redirects
     book_info = parse_book_metadata(soup, url_toc)
 
     # Create output folder
@@ -112,6 +112,7 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
         page_list: List of page numbers (for manual pagination)
         is_manual: Whether pagination is manually specified
     """
+    url_toc = resolve_book_url(url_toc)  # same host the metadata step used
     print(f"Getting TOC: {url_toc}")
     main_page_url, url_pattern = extract_url_components(url_toc)
 
@@ -145,19 +146,24 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
             all_chapters = []
 
             if check_pagination and page_list:
-                for page_num in page_list:
+                for idx, page_num in enumerate(page_list):
                     print(f"Processing page {page_num}")
+
+                    # Page 1 is already displayed after the initial load (auto-detect waited for
+                    # the pagination bar), and every click costs one of the site's TOC loads
+                    already_shown = idx == 0 and not is_manual and int(page_num) == 1
 
                     # Navigate to page
                     try:
-                        page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
-                        chosen_page = browser_page.locator(
-                            f"xpath=//a[@data-start='{page_start}']"
-                        ).first
-                        browser_page.evaluate("window.scrollTo(0, 200)")
-                        chosen_page.click()
-                        browser_page.evaluate("window.scrollTo(0, 300)")
-                        browser_page.wait_for_timeout(WEBDRIVER_WAIT * 1000)
+                        if not already_shown:
+                            page_start = CHAPTERS_PER_PAGE * (int(page_num) - 1)
+                            chosen_page = browser_page.locator(
+                                f"xpath=//a[@data-start='{page_start}']"
+                            ).first
+                            browser_page.evaluate("window.scrollTo(0, 200)")
+                            chosen_page.click()
+                            browser_page.evaluate("window.scrollTo(0, 300)")
+                            browser_page.wait_for_timeout(WEBDRIVER_WAIT * 1000)
                     except Exception as e:
                         logging.warning(f"Could not navigate to page {page_num}: {e}")
                         continue
@@ -190,6 +196,10 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
 
     print(f"Total chapters found: {len(unique_chapters)}")
 
+    # Never replace a previous toc.csv with an empty one
+    if not unique_chapters:
+        raise ValueError(f"No chapters were found on {url_toc}; toc.csv was not written.")
+
     # Export to CSV using pandas (only place pandas is used for processing)
     chapter_dicts = [c.to_dict() for c in unique_chapters]
     df = pd.DataFrame(chapter_dicts)
@@ -215,6 +225,8 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
     print(json.dumps(info_dict, indent=2, ensure_ascii=False))
 
     book_info = BookInfo.from_dict(info_dict)
+    # info.json stores a relative folder name; always use the folder we were given
+    book_info.output_folder = input_dir
 
     # Load TOC from CSV
     toc_df = pd.read_csv(os.path.join(book_info.output_folder, 'toc.csv'))
@@ -279,6 +291,36 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
     return num_fail
 
 
+def find_book_folders(location: str) -> list:
+    """
+    List downloaded books under `location` (or `location` itself if it is a book folder).
+
+    A book folder has info.json and toc.csv. Returns dicts with path, title,
+    downloaded (chapter files on disk) and total (chapters in toc.csv), sorted by title.
+    """
+    candidates = [location]
+    try:
+        candidates += [os.path.join(location, d) for d in sorted(os.listdir(location))]
+    except OSError:
+        return []
+    books = []
+    for path in candidates:
+        info_file = os.path.join(path, "info.json")
+        toc_file = os.path.join(path, "toc.csv")
+        if not (os.path.isfile(info_file) and os.path.isfile(toc_file)):
+            continue
+        try:
+            with open(info_file, 'r', encoding='utf-8') as f:
+                title = json.load(f).get('title') or os.path.basename(path)
+            with open(toc_file, 'r', encoding='utf-8') as f:
+                total = max(sum(1 for _ in f) - 1, 0)
+            downloaded = sum(1 for n in os.listdir(path) if n.startswith('chap_') and n.endswith('.html'))
+        except (OSError, ValueError):
+            continue
+        books.append({'path': path, 'title': title, 'downloaded': downloaded, 'total': total})
+    return sorted(books, key=lambda b: b['title'].lower())
+
+
 def make_ebook(input_dir: str, latest_chapter_read: int = 0,
                use_volume_structure: Optional[bool] = None) -> None:
     """
@@ -296,6 +338,8 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
         info_dict = json.load(f)
 
     book_info = BookInfo.from_dict(info_dict)
+    # info.json stores a relative folder name; always read chapters from the folder we were given
+    book_info.output_folder = input_dir
 
     # Load TOC
     toc_df = pd.read_csv(os.path.join(input_dir, 'toc.csv'))
@@ -347,12 +391,8 @@ def make_ebook(input_dir: str, latest_chapter_read: int = 0,
     output_title = determine_output_title(book_info, actual_last_chapter, latest_chapter_read, total_chapters)
     output_filename = f"{output_title}.epub"
 
-    # Download font
-    font_path = FONT_FILENAME
-    download_font(FONT_URL, font_path)
-
     # Create EPUB book
-    book = create_epub_book(book_info, output_title, font_path)
+    book = create_epub_book(book_info, output_title)
 
     # Add chapters
     c_list, toc_list = add_chapters_to_epub(book, html_files, book_info.output_folder)

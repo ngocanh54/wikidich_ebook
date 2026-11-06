@@ -21,7 +21,6 @@ toc.csv
 *.otf
 *.woff
 *.woff2
-Playwrite-IT-Moderna-Regular.ttf
 
 # Book output folders
 */info.json
@@ -90,3 +89,6 @@ chromedriver
 tmp/
 temp/
 *.tmp
+
+# Test fixtures are HTML on purpose
+!tests/fixtures/*.html

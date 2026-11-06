@@ -55,6 +55,7 @@ This tool includes automatic delays (2-7 seconds) between chapter downloads to:
    - Copy the novel's URL from truyenwikidich.net
    - Paste it into the app
    - Click "Download & Create EPUB"
+   - Downloaded a long book over several sessions? Choose "Download Chapters Only" to resume, or "Create EPUB Only" to build the EPUB: pick the save location and select the book from the list. No URL needed.
    - Wait for it to finish
    - Find your EPUB file in the folder you chose!
 
@@ -86,7 +87,7 @@ Want to run from source code, customize the tool, or use it on Windows/Linux? Se
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.12 or higher (tested on 3.12, 3.13 and 3.14)
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - Basic command line knowledge
 
@@ -150,11 +151,15 @@ python3 main.py "https://wikicv.net/truyen/your-novel-url" --check-only
 **Download chapters only (no EPUB yet):**
 ```bash
 python3 main.py "https://wikicv.net/truyen/your-novel-url" --download-only
+# No URL needed once the TOC is extracted: point at the book folder
+python3 main.py --download-only --book-folder path/to/book-folder
 ```
 
 **Create EPUB from already downloaded chapters:**
 ```bash
 python3 main.py "https://wikicv.net/truyen/your-novel-url" --epub-only
+# No URL needed: point at the downloaded book folder
+python3 main.py --epub-only --book-folder path/to/book-folder
 ```
 
 **Force volume/flat structure:**
@@ -359,7 +364,6 @@ Behind the scenes, the tool:
 - 🔄 Automatic retry for failed downloads
 - 📁 Organizes by volumes if the novel has them
 - 💾 Saves progress (skip already downloaded chapters)
-- 🎨 Includes custom fonts for better reading experience
 
 ---
 
@@ -474,7 +478,6 @@ wikidich_ebook/
 Default settings (in `config.py`):
 - **Delay between downloads:** 2-7 seconds (random)
 - **Chapters per page:** 501
-- **Font:** Playwrite IT Moderna (auto-downloaded)
 - **Retry passes:** up to 3 on failures; aborts early after 5 consecutive failures (IP block signal)
 - **User Agent:** Latest Chrome version
 
