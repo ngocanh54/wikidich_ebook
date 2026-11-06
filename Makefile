@@ -8,7 +8,7 @@ APP_DEST  := /Applications/$(APP_NAME).app
 VERSION   := $(shell $(PYTHON) -c "import wikidich_ebook; print(wikidich_ebook.__version__)" 2>/dev/null || echo "0.0.0")
 DMG       := dist/WikidichEbookCreator-$(VERSION).dmg
 
-.PHONY: setup install-deps playwright run check build install release clean help
+.PHONY: setup install-deps playwright run check gui-check build install release clean help
 
 ## ── Environment ────────────────────────────────────────────────────────────
 
@@ -24,6 +24,9 @@ run: ## Launch the GUI
 
 check: ## Offline smoke check: parser, scraper, and EPUB build on HTML fixtures
 	QT_QPA_PLATFORM=offscreen $(PYTHON) tests/offline_check.py
+
+gui-check: ## Offscreen GUI state check (no network)
+	QT_QPA_PLATFORM=offscreen $(PYTHON) tests/gui_check.py
 
 ## ── Build & Release ─────────────────────────────────────────────────────────
 

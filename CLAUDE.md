@@ -19,6 +19,7 @@ Wikidich Ebook Creator downloads Vietnamese web novels from truyenwikidich.net a
 ```bash
 make setup        # create .venv (Python 3.14, set by PY_VERSION in Makefile), install all deps, download Playwright Chromium
 make check        # offline smoke check, no network needed
+make gui-check    # offscreen GUI state check (idle/running/partial/success/error, light/dark)
 ```
 
 Supported Python: 3.12, 3.13 and 3.14 (all tested). Re-run `make setup` after changing `PY_VERSION`.
@@ -114,7 +115,7 @@ The `wikidich_ebook/` directory is a Python package. `__init__.py` re-exports th
 - **config.py**: Constants (USER_AGENT, delays, font settings, etc.)
 - **updater.py**: Update checking for GUI app
 - **main.py**: CLI interface with argparse (top-level, outside package)
-- **gui.py**: PyQt6 GUI application (top-level, outside package)
+- **gui.py**: PyQt6 GUI application (top-level, outside package); sidebar layout, styled by `wikidich_ebook/gui_style.py` (pastel light/dark, follows system)
 
 ### Key Technical Details
 

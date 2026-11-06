@@ -9,10 +9,10 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QTextEdit,
-    QProgressBar, QFileDialog, QMessageBox, QSpinBox, QComboBox, QGroupBox
+    QProgressBar, QFileDialog, QMessageBox, QSpinBox, QComboBox, QFrame, QGridLayout
 )
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl
-from PyQt6.QtGui import QFont, QDesktopServices, QAction
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl, QEvent
+from PyQt6.QtGui import QDesktopServices, QAction
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -26,6 +26,7 @@ from wikidich_ebook import (
     __version__
 )
 from wikidich_ebook.updater import check_for_updates
+from wikidich_ebook.gui_style import build_stylesheet
 
 
 class LogStream:
@@ -172,7 +173,7 @@ class WorkerThread(QThread):
             else:  # full workflow
                 self.status_signal.emit("Downloading and creating EPUB...")
                 self.log_signal.emit("\n" + "="*60 + "\n")
-                self.log_signal.emit("Operation: Full Workflow (Download & Create EPUB)\n")
+                self.log_signal.emit("Operation: Full Workflow (Download && Create EPUB)\n")
                 self.log_signal.emit("="*60 + "\n\n")
 
                 # Full workflow - pass progress callback for GUI progress bar
@@ -213,9 +214,9 @@ class WikidichEbookGUI(QMainWindow):
         self.check_for_updates_silently()
 
     def init_ui(self):
-        """Initialize the user interface."""
+        """Initialize the user interface (sidebar layout, styled by gui_style)."""
         self.setWindowTitle(f"Wikidich Ebook Creator v{__version__}")
-        self.setGeometry(100, 100, 900, 600)
+        self.setGeometry(100, 100, 1000, 700)
 
         # Menu bar
         menubar = self.menuBar()
@@ -231,84 +232,62 @@ class WikidichEbookGUI(QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
-        # Central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(15)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        root = QWidget()
+        self.setCentralWidget(root)
+        root_layout = QHBoxLayout(root)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
 
-        # Title
-        title = QLabel("📚 Wikidich Ebook Creator")
-        title.setFont(QFont("Arial", 24, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("color: #2c3e50; padding: 15px;")
+        root_layout.addWidget(self._build_sidebar())
+
+        content = QWidget()
+        content.setObjectName("content")
+        root_layout.addWidget(content, 1)
+        main_layout = QVBoxLayout(content)
+        main_layout.setSpacing(14)
+        main_layout.setContentsMargins(28, 24, 28, 20)
+
+        title = QLabel("Download a novel")
+        title.setObjectName("pageTitle")
         main_layout.addWidget(title)
-
-        # Subtitle
-        subtitle = QLabel("Download Vietnamese web novels as EPUB ebooks")
-        subtitle.setFont(QFont("Arial", 11))
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("color: #7f8c8d; padding-bottom: 10px;")
+        subtitle = QLabel("Paste a link, pick a folder, and get an EPUB for offline reading.")
+        subtitle.setObjectName("pageSub")
         main_layout.addWidget(subtitle)
 
-        # URL Input
-        url_label = QLabel("📖 Book URL (Table of Contents):")
-        url_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        main_layout.addWidget(url_label)
+        # Partial-download banner (hidden until a partial result arrives)
+        self.banner = QLabel()
+        self.banner.setObjectName("banner")
+        self.banner.setWordWrap(True)
+        self.banner.hide()
+        main_layout.addWidget(self.banner)
 
+        # URL
+        main_layout.addWidget(self._field_label("Book URL (table of contents page)"))
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Paste URL here: https://truyenwikidich.net/truyen/...")
-        self.url_input.setFont(QFont("Arial", 11))
-        self.url_input.setMinimumHeight(35)
+        self.url_input.setPlaceholderText("https://wikicv.org/truyen/...")
         main_layout.addWidget(self.url_input)
 
-        # Folder Selection
-        folder_label = QLabel("📁 Save Location:")
-        folder_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        main_layout.addWidget(folder_label)
-
+        # Save location
+        main_layout.addWidget(self._field_label("Save location"))
         folder_layout = QHBoxLayout()
         self.folder_display = QLineEdit()
         self.folder_display.setReadOnly(True)
         self.folder_display.setText(self.current_folder)
-        self.folder_display.setFont(QFont("Arial", 10))
-        self.folder_display.setMinimumHeight(35)
         folder_layout.addWidget(self.folder_display)
-
-        browse_btn = QPushButton("Browse...")
-        browse_btn.setFont(QFont("Arial", 10))
-        browse_btn.setMinimumHeight(35)
-        browse_btn.setMinimumWidth(100)
+        browse_btn = QPushButton("Browse…")
+        browse_btn.setObjectName("secondary")
+        browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         browse_btn.clicked.connect(self.browse_folder)
-        browse_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ecf0f1;
-                border: 1px solid #bdc3c7;
-                border-radius: 4px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #bdc3c7;
-            }
-        """)
         folder_layout.addWidget(browse_btn)
         main_layout.addLayout(folder_layout)
 
-        # Options Group
-        options_group = QGroupBox("⚙️ Options")
-        options_group.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        options_layout = QVBoxLayout()
-        options_group.setLayout(options_layout)
-
-        # Row 1: Operation Mode and Start Chapter
-        row1 = QHBoxLayout()
-
-        # Operation Mode
-        mode_layout = QVBoxLayout()
-        mode_label = QLabel("Operation:")
-        mode_label.setFont(QFont("Arial", 10))
-        mode_layout.addWidget(mode_label)
+        # Options card
+        card = QFrame()
+        card.setObjectName("card")
+        grid = QGridLayout(card)
+        grid.setContentsMargins(18, 14, 18, 16)
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(6)
 
         self.operation_combo = QComboBox()
         self.operation_combo.addItems([
@@ -318,136 +297,107 @@ class WikidichEbookGUI(QMainWindow):
             "Download Chapters Only",
             "Create EPUB Only"
         ])
-        self.operation_combo.setFont(QFont("Arial", 10))
-        self.operation_combo.setMinimumHeight(30)
         self.operation_combo.currentTextChanged.connect(self.update_action_button_text)
-        mode_layout.addWidget(self.operation_combo)
-        row1.addLayout(mode_layout)
-
-        # Start Chapter
-        chapter_layout = QVBoxLayout()
-        chapter_label = QLabel("Start Chapter:")
-        chapter_label.setFont(QFont("Arial", 10))
-        chapter_layout.addWidget(chapter_label)
 
         self.start_chapter_spin = QSpinBox()
         self.start_chapter_spin.setMinimum(0)
         self.start_chapter_spin.setMaximum(9999)
         self.start_chapter_spin.setValue(0)
-        self.start_chapter_spin.setFont(QFont("Arial", 10))
-        self.start_chapter_spin.setMinimumHeight(30)
         self.start_chapter_spin.setToolTip("Chapter number to start from (0 = from beginning)")
-        chapter_layout.addWidget(self.start_chapter_spin)
-        row1.addLayout(chapter_layout)
-
-        options_layout.addLayout(row1)
-
-        # Row 2: Volume Structure and Manual Pages
-        row2 = QHBoxLayout()
-
-        # Volume Structure
-        volume_layout = QVBoxLayout()
-        volume_label = QLabel("Volume Structure:")
-        volume_label.setFont(QFont("Arial", 10))
-        volume_layout.addWidget(volume_label)
 
         self.volume_combo = QComboBox()
         self.volume_combo.addItems(["Auto-detect", "Force Yes", "Force No"])
-        self.volume_combo.setFont(QFont("Arial", 10))
-        self.volume_combo.setMinimumHeight(30)
         self.volume_combo.setToolTip("Use volume structure in EPUB TOC")
-        volume_layout.addWidget(self.volume_combo)
-        row2.addLayout(volume_layout)
-
-        # Manual Pages
-        pages_layout = QVBoxLayout()
-        pages_label = QLabel("Manual Pages (optional):")
-        pages_label.setFont(QFont("Arial", 10))
-        pages_layout.addWidget(pages_label)
 
         self.manual_pages_input = QLineEdit()
         self.manual_pages_input.setPlaceholderText("e.g., 1,2,3,4,5")
-        self.manual_pages_input.setFont(QFont("Arial", 10))
-        self.manual_pages_input.setMinimumHeight(30)
         self.manual_pages_input.setToolTip("Comma-separated page numbers for manual pagination")
-        pages_layout.addWidget(self.manual_pages_input)
-        row2.addLayout(pages_layout)
 
-        options_layout.addLayout(row2)
+        for col, (text, widget) in enumerate([
+            ("Operation", self.operation_combo),
+            ("Start chapter", self.start_chapter_spin),
+        ]):
+            grid.addWidget(self._field_label(text), 0, col)
+            grid.addWidget(widget, 1, col)
+        for col, (text, widget) in enumerate([
+            ("Volume structure", self.volume_combo),
+            ("Manual pages (optional)", self.manual_pages_input),
+        ]):
+            grid.addWidget(self._field_label(text), 2, col)
+            grid.addWidget(widget, 3, col)
+        main_layout.addWidget(card)
 
-        main_layout.addWidget(options_group)
-
-        # Action Button
-        self.download_btn = QPushButton("📥 Download & Create EPUB")
-        self.download_btn.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        self.download_btn.setMinimumHeight(50)
+        # Action button
+        self.download_btn = QPushButton("📥 Download && Create EPUB")
+        self.download_btn.setObjectName("primary")
+        self.download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.download_btn.clicked.connect(self.start_download)
-        self.download_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 12px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QPushButton:pressed {
-                background-color: #21618c;
-            }
-            QPushButton:disabled {
-                background-color: #bdc3c7;
-                color: #7f8c8d;
-            }
-        """)
         main_layout.addWidget(self.download_btn)
 
-        # Progress Bar
+        # Progress bar
         self.progress = QProgressBar()
-        self.progress.setTextVisible(True)  # Show percentage
-        self.progress.setMinimumHeight(25)
-        self.progress.setFormat("%p%")  # Show percentage with % sign
-        self.progress.setStyleSheet("""
-            QProgressBar {
-                border: none;
-                border-radius: 4px;
-                background-color: #ecf0f1;
-                text-align: center;
-                color: #2c3e50;
-                font-weight: bold;
-            }
-            QProgressBar::chunk {
-                border-radius: 4px;
-                background-color: #3498db;
-            }
-        """)
+        self.progress.setTextVisible(True)
+        self.progress.setFormat("%p%")
         main_layout.addWidget(self.progress)
 
-        # Log Output
-        log_label = QLabel("📝 Progress Log:")
-        log_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        main_layout.addWidget(log_label)
-
+        # Log
         self.log_text = QTextEdit()
+        self.log_text.setObjectName("log")
         self.log_text.setReadOnly(True)
-        self.log_text.setFont(QFont("Courier", 9))
         self.log_text.setPlaceholderText("Logs will appear here...")
-        self.log_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #2c3e50;
-                color: #ecf0f1;
-                border: 1px solid #34495e;
-                border-radius: 4px;
-                padding: 10px;
-            }
-        """)
-        main_layout.addWidget(self.log_text)
+        main_layout.addWidget(self.log_text, 1)
 
-        # Status Bar
+        # Status bar
         self.status_label = QLabel("Ready")
-        self.status_label.setFont(QFont("Arial", 10))
         self.statusBar().addWidget(self.status_label)
+
+        self.apply_theme()
+
+    def _field_label(self, text):
+        label = QLabel(text)
+        label.setObjectName("fieldLabel")
+        return label
+
+    def _build_sidebar(self):
+        side = QWidget()
+        side.setObjectName("sidebar")
+        side.setFixedWidth(200)
+        layout = QVBoxLayout(side)
+        layout.setContentsMargins(16, 22, 16, 16)
+        layout.setSpacing(8)
+
+        brand = QLabel("📚 Wikidich")
+        brand.setObjectName("brand")
+        layout.addWidget(brand)
+        version = QLabel(f"Ebook Creator v{__version__}")
+        version.setObjectName("version")
+        layout.addWidget(version)
+        layout.addSpacing(14)
+
+        current = QPushButton("New download")
+        current.setObjectName("navActive")
+        layout.addWidget(current)
+
+        library = QPushButton("Library  ·  Soon")
+        library.setObjectName("navSoon")
+        library.setEnabled(False)
+        layout.addWidget(library)
+
+        layout.addStretch(1)
+        return side
+
+    def apply_theme(self):
+        """Apply the stylesheet matching the system light/dark setting."""
+        dark = QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        if dark == getattr(self, "_dark", None):
+            return  # setStyleSheet itself fires change events; avoid a loop
+        self._dark = dark
+        self.setStyleSheet(build_stylesheet(dark=dark))
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "banner"):
+            self.apply_theme()
 
     def browse_folder(self):
         """Open folder browser dialog."""
@@ -463,13 +413,13 @@ class WikidichEbookGUI(QMainWindow):
     def update_action_button_text(self, operation_text):
         """Update action button text based on selected operation."""
         button_texts = {
-            "Full Workflow": "📥 Download & Create EPUB",
+            "Full Workflow": "📥 Download && Create EPUB",
             "Check for Updates": "🔍 Check for Updates",
             "Extract TOC Only": "📑 Extract Table of Contents",
             "Download Chapters Only": "⬇️ Download Chapters",
             "Create EPUB Only": "📚 Create EPUB"
         }
-        self.download_btn.setText(button_texts.get(operation_text, "📥 Download & Create EPUB"))
+        self.download_btn.setText(button_texts.get(operation_text, "📥 Download && Create EPUB"))
 
     def validate_inputs(self):
         """Validate user inputs."""
@@ -483,11 +433,11 @@ class WikidichEbookGUI(QMainWindow):
             QMessageBox.warning(self, "Invalid URL", "URL must start with http:// or https://")
             return False
 
-        if "truyenwikidich.net" not in url and "wikicv.net" not in url:
+        if not any(host in url for host in ("truyenwikidich.net", "wikicv.net", "wikicv.org")):
             reply = QMessageBox.question(
                 self,
                 "Confirm URL",
-                "This doesn't look like a truyenwikidich.net or wikicv.net URL.\nContinue anyway?",
+                "This doesn't look like a truyenwikidich.net, wikicv.net or wikicv.org URL.\nContinue anyway?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.No:
@@ -534,6 +484,7 @@ class WikidichEbookGUI(QMainWindow):
 
         # Disable button
         self.download_btn.setEnabled(False)
+        self.banner.hide()
 
         # Set progress bar to indeterminate mode (animated) during execution
         self.progress.setRange(0, 0)
@@ -594,6 +545,8 @@ class WikidichEbookGUI(QMainWindow):
             self.progress.setFormat("%p%")
 
         if is_partial:
+            self.banner.setText(message)
+            self.banner.show()
             QMessageBox.warning(
                 self,
                 "Partial Download",
