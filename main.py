@@ -32,6 +32,12 @@ def main():
     )
 
     parser.add_argument(
+        '--end-chapter',
+        type=int,
+        default=0,
+        help='Last chapter number to download, with --download-only (default: 0 - through the last chapter)'
+    )
+    parser.add_argument(
         '--start-chapter',
         type=int,
         default=0,
@@ -123,7 +129,7 @@ def main():
                 folder = os.path.abspath(args.book_folder)
             else:
                 is_updated, folder = check_if_updated(args.url)
-            download_truyen(folder, args.start_chapter)
+            download_truyen(folder, args.start_chapter, end_chapter=args.end_chapter)
             print("\n✓ Chapters downloaded successfully!")
 
         elif args.epub_only:

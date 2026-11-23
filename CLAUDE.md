@@ -50,6 +50,9 @@ python3 main.py "URL" --download-only
 # Or without any URL, for a book whose TOC is already extracted
 python3 main.py --download-only --book-folder path/to/book-folder
 
+# CLI - Download only chapters 100-200 (--end-chapter 0 = through the last chapter)
+python3 main.py --download-only --book-folder path/to/book-folder --start-chapter 100 --end-chapter 200
+
 # CLI - Create EPUB from already downloaded chapters
 python3 main.py "URL" --epub-only
 # Or without any URL (no network): point at the downloaded book folder

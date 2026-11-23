@@ -58,7 +58,7 @@ def _sleep_unless_stopped(seconds, should_stop):
 def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
                       author: str, url_pattern: str, output_folder: str,
                       latest_chapter_read: int = 0, progress_callback=None,
-                      should_stop=None) -> int:
+                      should_stop=None, end_chapter: int = 0) -> int:
     """
     Download all chapters from the list.
 
@@ -73,6 +73,7 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
         progress_callback: Optional callback function(current, total) for progress updates
         should_stop: Optional callable; when it returns True the download stops after the
             current chapter and DownloadCancelled is raised (saved chapters are kept)
+        end_chapter: Last chapter number to download (0 = through the last chapter)
 
     Returns:
         Number of failed downloads
@@ -90,7 +91,10 @@ def download_chapters(chapters: List[Chapter], chapter_prefix: str, title: str,
     logging.info(f'Download {title}')
 
     # Filter chapters
-    chapters_to_download = [c for c in chapters if c.chapter_number >= latest_chapter_read]
+    chapters_to_download = [
+        c for c in chapters
+        if c.chapter_number >= latest_chapter_read and (not end_chapter or c.chapter_number <= end_chapter)
+    ]
     total_chapters = len(chapters_to_download)
     num_fail = 0
     num_attempted = 0
