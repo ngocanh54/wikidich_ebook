@@ -32,7 +32,11 @@ def _ensure_playwright_browser() -> None:
     except Exception as e:
         if "Executable doesn't exist" in str(e) or "not found" in str(e).lower():
             print("Playwright Chromium not found — installing now (one-time setup)...")
-            subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+            # Use Playwright's bundled driver: in a PyInstaller app sys.executable is the app
+            # itself, so "python -m playwright" would not run the installer.
+            from playwright._impl._driver import compute_driver_executable, get_driver_env
+            node, cli = compute_driver_executable()
+            subprocess.check_call([node, cli, "install", "chromium"], env=get_driver_env())
         else:
             raise
 import pandas as pd
