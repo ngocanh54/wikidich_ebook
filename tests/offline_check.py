@@ -379,6 +379,38 @@ def download_only_from_book_folder_without_url():
 
 
 @check
+def download_only_stops_at_end_chapter():
+    """Download Chapters Only with an end chapter: only start..end are fetched; end < start is rejected."""
+    from wikidich_ebook import download_truyen
+    from wikidich_ebook import downloader, scraper
+    info, chapters = build_book("toc_volumes.html", VOLUME_URL)
+    book_dir = os.path.abspath(info.output_folder)
+    numbers = [c.chapter_number for c in chapters]
+    for n in numbers:
+        os.remove(os.path.join(book_dir, f"chap_{n:04d}.html"))
+    start, end = numbers[1], numbers[3]
+    chapter_page = read_fixture("chapter_page.html")
+    asked = []
+    def fake_get(url, *a, **k):
+        asked.append(url)
+        return FakeResponse(chapter_page)
+    with mock.patch.object(scraper.requests, "get", fake_get), \
+         mock.patch.object(downloader.time, "sleep", lambda s: None):
+        fails = download_truyen(book_dir, start, end_chapter=end)
+        assert not fails, f"{fails} failures"
+        assert len(asked) == end - start + 1, f"{len(asked)} requests for chapters {start}-{end}"
+        for n in numbers:
+            exists = os.path.exists(os.path.join(book_dir, f"chap_{n:04d}.html"))
+            assert exists == (start <= n <= end), f"chapter {n}: exists={exists}"
+        try:
+            download_truyen(book_dir, end, end_chapter=start)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("end before start was accepted")
+
+
+@check
 def epub_auto_detects_volumes():
     # use_volume_structure=None must detect the two volumes from toc.csv
     info = build_book("toc_volumes.html", VOLUME_URL)[0]

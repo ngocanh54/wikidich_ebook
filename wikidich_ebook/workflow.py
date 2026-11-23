@@ -221,7 +221,7 @@ def get_toc(url_toc: str, output_folder: str, check_pagination: bool = False,
 
 
 def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callback=None,
-                    should_stop=None) -> None:
+                    should_stop=None, end_chapter: int = 0) -> None:
     """
     Download all chapters of a book.
 
@@ -230,7 +230,11 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         latest_chapter_read: Start from this chapter number
         progress_callback: Optional callback function(current, total) for progress updates
         should_stop: Optional callable; True stops the download (raises DownloadCancelled)
+        end_chapter: Last chapter number to download (0 = through the last chapter)
     """
+    if end_chapter and end_chapter < latest_chapter_read:
+        raise ValueError(f"End chapter ({end_chapter}) is before start chapter ({latest_chapter_read}).")
+
     # Load book info
     info_file = os.path.join(input_dir, "info.json")
     with open(info_file, 'r', encoding='utf-8') as f:
@@ -285,13 +289,14 @@ def download_truyen(input_dir: str, latest_chapter_read: int = 0, progress_callb
         num_fail = download_chapters(
             chapters, chapter_prefix, book_info.title, book_info.author,
             book_info.url_pattern, book_info.output_folder, latest_chapter_read,
-            progress_callback, should_stop
+            progress_callback, should_stop, end_chapter
         )
 
     if num_fail > 0:
         still_missing = sum(
             1 for c in chapters
             if c.chapter_number >= latest_chapter_read
+            and (not end_chapter or c.chapter_number <= end_chapter)
             and not os.path.exists(os.path.join(
                 book_info.output_folder, f"{chapter_prefix}_{c.chapter_number:04d}.html"
             ))

@@ -58,13 +58,14 @@ class WorkerThread(QThread):
     progress_signal = pyqtSignal(int, int)  # (current, total) for chapter downloads
 
     def __init__(self, url, output_folder, operation_mode='full', start_chapter=0,
-                 volume_structure='auto', manual_pages=None, book_folder=None):
+                 volume_structure='auto', manual_pages=None, book_folder=None, end_chapter=0):
         super().__init__()
         self.book_folder = book_folder  # Download Chapters Only / Create EPUB Only: existing book folder, no URL needed
         self.url = url
         self.output_folder = output_folder
         self.operation_mode = operation_mode
         self.start_chapter = start_chapter
+        self.end_chapter = end_chapter
         self.volume_structure = volume_structure
         self.manual_pages = manual_pages
         self._stop_requested = False
@@ -165,7 +166,7 @@ class WorkerThread(QThread):
 
                 # Pass progress callback for GUI progress bar
                 num_fail = download_truyen(self.book_folder, self.start_chapter, self.progress_callback,
-                                          self.should_stop)
+                                          self.should_stop, self.end_chapter)
 
                 if num_fail and num_fail > 0:
                     self.log_signal.emit(f"\n⚠️ Partial download: {num_fail} chapter(s) could not be downloaded due to IP restriction.\n")
@@ -342,6 +343,13 @@ class WikidichEbookGUI(QMainWindow):
         self.start_chapter_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.start_chapter_spin.setToolTip("Chapter number to start from (0 = from beginning)")
 
+        self.end_chapter_spin = QSpinBox()
+        self.end_chapter_spin.setMinimum(0)
+        self.end_chapter_spin.setMaximum(99999)
+        self.end_chapter_spin.setValue(0)
+        self.end_chapter_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        self.end_chapter_spin.setToolTip("Last chapter to download (0 = through the last chapter). Download Chapters Only")
+
         self.volume_combo = QComboBox()
         self.volume_combo.addItems(["Auto-detect", "Force Yes", "Force No"])
         self.volume_combo.setToolTip("Use volume structure in EPUB TOC")
@@ -353,6 +361,7 @@ class WikidichEbookGUI(QMainWindow):
         for col, (text, widget) in enumerate([
             ("Operation", self.operation_combo),
             ("Start chapter", self.start_chapter_spin),
+            ("End chapter (0 = last)", self.end_chapter_spin),
         ]):
             grid.addWidget(self._field_label(text), 0, col)
             grid.addWidget(widget, 1, col)
@@ -360,9 +369,11 @@ class WikidichEbookGUI(QMainWindow):
             ("Volume structure", self.volume_combo),
             ("Manual pages (optional)", self.manual_pages_input),
         ]):
-            grid.addWidget(self._field_label(text), 2, col)
-            grid.addWidget(widget, 3, col)
+            span = 2 if widget is self.manual_pages_input else 1
+            grid.addWidget(self._field_label(text), 2, col, 1, span)
+            grid.addWidget(widget, 3, col, 1, span)
         main_layout.addWidget(card)
+        self.end_chapter_spin.setEnabled(False)  # only for Download Chapters Only
 
         # Action button
         self.download_btn = QPushButton("📥 Download && Create EPUB")
@@ -479,6 +490,7 @@ class WikidichEbookGUI(QMainWindow):
         self.book_label.setVisible(epub_only)
         self.book_combo.setVisible(epub_only)
         self.manual_pages_input.setEnabled(not epub_only)
+        self.end_chapter_spin.setEnabled(self.operation_combo.currentText() == "Download Chapters Only")
         if epub_only:
             self.refresh_books()
 
@@ -526,6 +538,11 @@ class WikidichEbookGUI(QMainWindow):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
                 return reply == QMessageBox.StandardButton.Yes
+            end = self.end_chapter_spin.value()
+            if (self.operation_combo.currentText() == "Download Chapters Only"
+                    and end and end < self.start_chapter_spin.value()):
+                QMessageBox.warning(self, "Invalid range", "End chapter must not be before the start chapter.")
+                return False
             return True
 
         url = self.url_input.text().strip()
@@ -607,6 +624,7 @@ class WikidichEbookGUI(QMainWindow):
             self.current_folder,
             operation_mode=operation_mode,
             start_chapter=start_chapter,
+            end_chapter=self.end_chapter_spin.value() if operation_mode == 'download' else 0,
             volume_structure=volume_structure,
             manual_pages=manual_pages,
             book_folder=book_folder
