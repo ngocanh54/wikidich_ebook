@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QLabel, QLineEdit, QPushButton, QTextEdit,
     QProgressBar, QFileDialog, QMessageBox, QSpinBox, QComboBox, QFrame, QGridLayout
 )
-from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QUrl, QSettings
 from PyQt6.QtGui import QDesktopServices, QAction
 
 # Add parent directory to path
@@ -229,7 +229,10 @@ class WikidichEbookGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.worker = None
-        self.current_folder = str(Path.home())  # Default to home directory
+        # Remember the save location between runs (same QSettings approach as kcc-annet)
+        self.settings = QSettings("WikidichEbookCreator", "WikidichEbookCreator")
+        saved = str(self.settings.value("saveLocation", "", type=str))
+        self.current_folder = saved if saved and os.path.isdir(saved) else str(Path.home())
         self.init_ui()
 
         # Check for updates on startup
@@ -458,6 +461,7 @@ class WikidichEbookGUI(QMainWindow):
         )
         if folder:
             self.current_folder = folder
+            self.settings.setValue("saveLocation", folder)
             self.folder_display.setText(folder)
             self.refresh_books()
 
